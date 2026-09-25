@@ -222,6 +222,9 @@ npm run build
 - Single backend instance; horizontal scaling is described conceptually only.
 - Two concurrent sessions verified end to end; more is untested.
 - A session stays in `STOPPING` for up to ~40 s while Gemini flushes trailing captions.
+- Caption completeness depends on the Gemini Live API: on a free-tier key, running two
+  sessions at once occasionally returns a truncated transcript (or none at all) for one
+  of them, while the same audio processed alone transcribes in full.
 - One language pair (English → Spanish).
 
 ## License
