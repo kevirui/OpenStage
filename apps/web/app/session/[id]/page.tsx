@@ -160,7 +160,9 @@ export default function SessionAudiencePage() {
       <div className="rounded-xl bg-slate-900/60 border border-slate-800 p-6 space-y-4">
         <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Transcript</h2>
         {history.length === 0 ? (
-          <p className="text-slate-500 text-sm italic">No finalized captions yet in this session.</p>
+          <p className="text-slate-500 text-sm italic">
+            Earlier finalized captions will appear here once the session moves past its first segment.
+          </p>
         ) : (
           <div className="space-y-3 max-h-80 overflow-y-auto pr-2">
             {history.map((caption, idx) => (
