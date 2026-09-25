@@ -37,7 +37,7 @@ const sessionManager = new SessionManager(
   realtimeServer,
   (session) => {
     const path = session.audioSource?.type === 'file' ? session.audioSource.path : undefined;
-    return useGemini && path ? new FileAudioChunkSource(path) : undefined;
+    return useGemini && path ? new FileAudioChunkSource(resolveFromRepoRoot(path)) : undefined;
   }
 );
 
@@ -79,9 +79,17 @@ async function seedDemoSessions() {
   console.log('[OpenStage] Demo sessions (demo-session, stage-a, stage-b) initialized.');
 }
 
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
 // REST Endpoints
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    provider: useGemini ? 'GeminiSpeechProvider' : 'MockSpeechProvider',
+    timestamp: new Date().toISOString(),
+  });
 });
 
 app.get('/api/sessions', async (req, res) => {
@@ -93,8 +101,8 @@ app.post('/api/sessions', async (req, res) => {
   try {
     const session = await sessionManager.createSession(req.body);
     res.status(201).json(session);
-  } catch (err: any) {
-    res.status(400).json({ error: err.message });
+  } catch (err) {
+    res.status(400).json({ error: errorMessage(err) });
   }
 });
 
@@ -114,8 +122,8 @@ app.post('/api/sessions/:id/start', async (req, res) => {
       return res.status(404).json({ error: 'Session not found' });
     }
     res.json(session);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
+  } catch (err) {
+    res.status(500).json({ error: errorMessage(err) });
   }
 });
 
@@ -126,8 +134,8 @@ app.post('/api/sessions/:id/stop', async (req, res) => {
       return res.status(404).json({ error: 'Session not found' });
     }
     res.json(session);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
+  } catch (err) {
+    res.status(500).json({ error: errorMessage(err) });
   }
 });
 

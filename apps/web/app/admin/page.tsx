@@ -7,6 +7,7 @@ export default function AdminDashboardPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [provider, setProvider] = useState<string | null>(null);
 
   const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:4000';
 
@@ -24,6 +25,10 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     fetchSessions();
+    fetch(`${serverUrl}/api/health`)
+      .then((res) => res.json())
+      .then((data: { provider?: string }) => setProvider(data.provider ?? null))
+      .catch(() => undefined);
     const interval = setInterval(fetchSessions, 3000);
     return () => clearInterval(interval);
   }, []);
@@ -58,6 +63,13 @@ export default function AdminDashboardPage() {
         <h1 className="text-3xl font-bold text-white mb-2">OpenStage Control Room</h1>
         <p className="text-slate-400">Manage and monitor conference live caption streams.</p>
       </div>
+
+      {provider === 'MockSpeechProvider' && (
+        <p className="rounded-lg border border-amber-900/60 bg-amber-950/30 px-4 py-3 text-sm text-amber-300">
+          GEMINI_API_KEY is not configured on the server, so sessions emit mock captions. Add it to the root{' '}
+          <code>.env</code> and restart the backend for real transcription and translation.
+        </p>
+      )}
 
       {loading ? (
         <div className="text-slate-400">Loading control dashboard...</div>
@@ -97,7 +109,7 @@ export default function AdminDashboardPage() {
                 </div>
                 <div>
                   <span className="text-slate-500 block">AI Provider</span>
-                  <span className="text-slate-300 font-mono">MockProvider</span>
+                  <span className="text-slate-300 font-mono">{provider || 'unknown'}</span>
                 </div>
               </div>
 

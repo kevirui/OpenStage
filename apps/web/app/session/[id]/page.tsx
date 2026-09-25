@@ -111,8 +111,14 @@ export default function SessionAudiencePage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between border-b border-slate-800 pb-4 gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">{session?.name || sessionId}</h1>
-          <p className="text-sm text-slate-400 font-mono">Session ID: {sessionId}</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-white">{session?.name || sessionId}</h1>
+          <p className="text-sm text-slate-400">
+            Live translated captions ·{' '}
+            <span className="font-mono uppercase">
+              {(session?.sourceLanguage || 'en')} → {(session?.targetLanguage || 'es')}
+            </span>{' '}
+            · <span className="font-mono">{sessionId}</span>
+          </p>
         </div>
         <div className="flex items-center gap-3 text-xs">
           <span className={`flex items-center gap-1.5 ${connectionColors[connection]}`}>
@@ -137,8 +143,12 @@ export default function SessionAudiencePage() {
             <span>Original</span>
             <span className="text-slate-600 font-mono">{(session?.sourceLanguage || 'en').toUpperCase()}</span>
           </div>
-          <div className="flex-1 flex items-center justify-center text-center p-4">
-            <p className="text-xl md:text-2xl font-medium text-slate-200 leading-relaxed">
+          <div className="flex-1 flex items-center justify-center text-center p-2">
+            <p
+              className={`text-2xl md:text-3xl font-medium leading-snug ${
+                current ? 'text-slate-100' : 'text-slate-500 italic text-lg'
+              }`}
+            >
               {current ? current.original : 'Waiting for captions...'}
             </p>
           </div>
@@ -149,8 +159,12 @@ export default function SessionAudiencePage() {
             <span>Español</span>
             <span className="text-sky-600 font-mono">{(session?.targetLanguage || 'es').toUpperCase()}</span>
           </div>
-          <div className="flex-1 flex items-center justify-center text-center p-4">
-            <p className="text-xl md:text-2xl font-medium text-sky-300 leading-relaxed">
+          <div className="flex-1 flex items-center justify-center text-center p-2">
+            <p
+              className={`text-2xl md:text-3xl font-medium leading-snug ${
+                current ? 'text-sky-300' : 'text-slate-500 italic text-lg'
+              }`}
+            >
               {current ? current.translation : 'Esperando subtítulos...'}
             </p>
           </div>

@@ -5,3 +5,10 @@ build
 .env
 .env.local
 *.log
+*.tsbuildinfo
+
+# Local demo recordings are user-provided; only licensed audio is committed
+demo/audio/*.mp3
+demo/audio/*.m4a
+demo/audio/*.wav
+!demo/audio/Del*Abigail*.mp3
