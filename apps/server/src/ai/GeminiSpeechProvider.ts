@@ -1,22 +1,48 @@
-import { SpeechProvider, ProviderOptions, CaptionEvent } from '@openstage/shared';
-import { GoogleGenAI } from '@google/genai';
-import fs from 'fs';
-import path from 'path';
+import { AudioChunk, CaptionEvent, ProviderOptions, SpeechProvider } from '@openstage/shared';
+import { GoogleGenAI, Modality, type LiveServerMessage, type Session as LiveSession } from '@google/genai';
+import { LiveCaptionAccumulator } from './LiveCaptionAccumulator.js';
+import { buildInterpreterInstruction } from './prompts.js';
 
 export interface GeminiSpeechProviderConfig {
   apiKey?: string;
   modelName?: string;
+  /** Upper bound for the wait for trailing captions after the audio ends. */
+  finalizeTimeoutMs?: number;
+  /** Silence from the model that marks the end of the trailing captions. */
+  finalizeIdleMs?: number;
 }
 
+export const DEFAULT_LIVE_MODEL = 'gemini-3.5-live-translate-preview';
+
+interface LiveSessionState {
+  session: LiveSession;
+  accumulator: LiveCaptionAccumulator;
+  offsetMs: number;
+  closed: boolean;
+  error?: Error;
+  lastMessageAt: number;
+}
+
+/**
+ * Streams audio to the Gemini Live API (bidirectional WebSocket) and emits
+ * incremental caption events. The model acts as a simultaneous interpreter:
+ * its input transcription is the original speech, its output transcription is
+ * the translation.
+ */
 export class GeminiSpeechProvider implements SpeechProvider {
   readonly providerName = 'GeminiSpeechProvider';
-  private apiKey: string;
-  private modelName: string;
+  private readonly apiKey: string;
+  private readonly modelName: string;
+  private readonly finalizeTimeoutMs: number;
+  private readonly finalizeIdleMs: number;
   private callbacks: ((event: CaptionEvent) => void)[] = [];
+  private states: Map<string, LiveSessionState> = new Map();
 
   constructor(config: GeminiSpeechProviderConfig = {}) {
-    this.apiKey = config.apiKey || process.env.GEMINI_API_KEY || '';
-    this.modelName = config.modelName || 'gemini-2.5-flash';
+    this.apiKey = config.apiKey ?? process.env.GEMINI_API_KEY ?? '';
+    this.modelName = config.modelName || process.env.GEMINI_LIVE_MODEL || DEFAULT_LIVE_MODEL;
+    this.finalizeTimeoutMs = config.finalizeTimeoutMs ?? 20000;
+    this.finalizeIdleMs = config.finalizeIdleMs ?? 3000;
   }
 
   async startStream(options: ProviderOptions): Promise<void> {
@@ -25,120 +51,172 @@ export class GeminiSpeechProvider implements SpeechProvider {
         'GEMINI_API_KEY environment variable is missing. Please set GEMINI_API_KEY in your .env file or environment.'
       );
     }
-
-    const filePath = options.audioSource?.path;
-    if (!filePath) {
-      throw new Error(
-        `Audio source path is missing for session '${options.sessionId}'. Provide a valid audio file path.`
-      );
+    if (this.states.has(options.sessionId)) {
+      throw new Error(`A Gemini Live session is already running for '${options.sessionId}'.`);
     }
-
-    const resolvedPath = path.isAbsolute(filePath)
-      ? filePath
-      : path.resolve(process.cwd(), filePath);
-
-    if (!fs.existsSync(resolvedPath)) {
-      throw new Error(
-        `Demo audio file not found at path: ${resolvedPath}. Please place a valid audio file (e.g., stage-a.mp3) in the demo/audio/ directory.`
-      );
-    }
-
-    const mimeType = this.getMimeType(resolvedPath);
-    const audioBuffer = fs.readFileSync(resolvedPath);
-    const base64Audio = audioBuffer.toString('base64');
 
     const ai = new GoogleGenAI({ apiKey: this.apiKey });
+    const accumulator = new LiveCaptionAccumulator(
+      options.sessionId,
+      options.sourceLanguage,
+      options.targetLanguage
+    );
 
-    const prompt = `You are a live speech transcriber and translator for technical conference presentations.
-Analyze the provided audio file.
-1. Extract the complete verbatim speech transcript in its original language (${options.sourceLanguage}).
-2. Provide an accurate, fluent translation into ${options.targetLanguage}.
-Respond ONLY with a valid JSON object matching this structure:
-{
-  "original": "Text in original language",
-  "translation": "Translated text in target language"
-}`;
-
+    let session: LiveSession;
     try {
-      const response = await ai.models.generateContent({
+      session = await ai.live.connect({
         model: this.modelName,
-        contents: [
-          {
-            inlineData: {
-              mimeType,
-              data: base64Audio,
-            },
-          },
-          prompt,
-        ],
         config: {
-          responseMimeType: 'application/json',
+          responseModalities: [Modality.AUDIO],
+          inputAudioTranscription: {},
+          outputAudioTranscription: {},
+          systemInstruction: buildInterpreterInstruction(
+            options.sourceLanguage,
+            options.targetLanguage,
+            options.glossary
+          ),
+        },
+        callbacks: {
+          onmessage: (message: LiveServerMessage) => this.handleMessage(options.sessionId, message),
+          onerror: (event: ErrorEvent) => {
+            this.failSession(
+              options.sessionId,
+              new Error(`Gemini Live session error: ${event.message || 'unknown error'}`)
+            );
+          },
+          onclose: (event: CloseEvent) => {
+            const state = this.states.get(options.sessionId);
+            if (state && !state.closed) {
+              this.failSession(
+                options.sessionId,
+                new Error(
+                  `Gemini Live connection closed unexpectedly (code ${event.code}): ${event.reason || 'no reason given'}`
+                )
+              );
+            }
+          },
         },
       });
-
-      const textResult = response.text || '';
-      const parsed = this.parseResponse(textResult);
-
-      const event: CaptionEvent = {
-        id: `cap_gemini_${Date.now()}`,
-        sessionId: options.sessionId,
-        timestamp: Date.now(),
-        original: parsed.original,
-        translation: parsed.translation,
-        language: options.sourceLanguage,
-        targetLanguage: options.targetLanguage,
-        final: true,
-      };
-
-      this.callbacks.forEach((cb) => cb(event));
-    } catch (err: any) {
-      if (err.message && err.message.includes('GEMINI_API_KEY')) {
-        throw err;
-      }
-      throw new Error(`Gemini API processing failed: ${err.message || String(err)}`);
+    } catch (err) {
+      throw new Error(
+        `Could not open a Gemini Live session with model '${this.modelName}': ${errorMessage(err)}. ` +
+          'Check GEMINI_API_KEY and, if the model is unavailable for your key, set GEMINI_LIVE_MODEL to a model that supports the Live API.'
+      );
     }
+
+    this.states.set(options.sessionId, {
+      session,
+      accumulator,
+      offsetMs: 0,
+      closed: false,
+      lastMessageAt: Date.now(),
+    });
+  }
+
+  async sendAudioChunk(sessionId: string, chunk: AudioChunk): Promise<void> {
+    const state = this.requireState(sessionId);
+    if (state.error) {
+      throw state.error;
+    }
+
+    state.offsetMs = chunk.offsetMs + chunk.durationMs;
+    state.session.sendRealtimeInput({
+      audio: {
+        data: Buffer.from(chunk.data).toString('base64'),
+        mimeType: `audio/pcm;rate=${chunk.sampleRate}`,
+      },
+    });
   }
 
   async stopStream(sessionId: string): Promise<void> {
-    // For single audio file processing, stream stops automatically upon completion
+    const state = this.states.get(sessionId);
+    if (!state) {
+      return;
+    }
+
+    try {
+      if (!state.error) {
+        await this.waitForTrailingCaptions(state);
+        state.session.sendRealtimeInput({ audioStreamEnd: true });
+        await this.waitForTrailingCaptions(state);
+      }
+
+      const pending = state.accumulator.flush(state.offsetMs);
+      if (pending) {
+        this.emit(pending);
+      }
+    } finally {
+      state.closed = true;
+      this.states.delete(sessionId);
+      try {
+        state.session.close();
+      } catch {
+        // connection already gone
+      }
+    }
+
+    if (state.error) {
+      throw state.error;
+    }
   }
 
   onCaption(callback: (event: CaptionEvent) => void): void {
     this.callbacks.push(callback);
   }
 
-  public parseResponse(text: string): { original: string; translation: string } {
-    try {
-      const cleaned = text.trim().replace(/^```json\s*/, '').replace(/```$/, '');
-      const parsed = JSON.parse(cleaned);
-      return {
-        original: parsed.original || '[No transcription returned]',
-        translation: parsed.translation || '[No translation returned]',
-      };
-    } catch (e) {
-      return {
-        original: text.trim() || '[Unparseable transcription]',
-        translation: '[Translation parse error]',
-      };
+  /** Waits until the model stops sending captions, bounded by finalizeTimeoutMs. */
+  private async waitForTrailingCaptions(state: LiveSessionState): Promise<void> {
+    const deadline = Date.now() + this.finalizeTimeoutMs;
+    state.lastMessageAt = Date.now();
+
+    while (Date.now() < deadline && Date.now() - state.lastMessageAt < this.finalizeIdleMs) {
+      if (state.error) {
+        return;
+      }
+      await delay(200);
     }
   }
 
-  private getMimeType(filePath: string): string {
-    const ext = path.extname(filePath).toLowerCase();
-    switch (ext) {
-      case '.mp3':
-        return 'audio/mp3';
-      case '.wav':
-        return 'audio/wav';
-      case '.m4a':
-      case '.aac':
-        return 'audio/aac';
-      case '.ogg':
-        return 'audio/ogg';
-      case '.flac':
-        return 'audio/flac';
-      default:
-        return 'audio/mp3';
+  private handleMessage(sessionId: string, message: LiveServerMessage): void {
+    const state = this.states.get(sessionId);
+    if (!state) {
+      return;
+    }
+
+    state.lastMessageAt = Date.now();
+
+    const event = state.accumulator.accept(message, state.offsetMs);
+    if (event) {
+      this.emit(event);
     }
   }
+
+  private failSession(sessionId: string, error: Error): void {
+    const state = this.states.get(sessionId);
+    if (state && !state.error) {
+      state.error = error;
+    }
+  }
+
+  private requireState(sessionId: string): LiveSessionState {
+    const state = this.states.get(sessionId);
+    if (!state) {
+      throw new Error(
+        `No active Gemini Live session for '${sessionId}'. Call startStream() before sending audio chunks.`
+      );
+    }
+    return state;
+  }
+
+  private emit(event: CaptionEvent): void {
+    this.callbacks.forEach((cb) => cb(event));
+  }
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
 }
