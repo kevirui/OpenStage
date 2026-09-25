@@ -1,112 +1,113 @@
 # OpenStage
 
-## 1. Project Overview
+## 1. Resumen del proyecto
 
-OpenStage is an open-source real-time multilingual captioning platform designed for conferences such as Nerdearla.
+OpenStage es una plataforma open source de subtitulado multilingüe en tiempo real, pensada para conferencias como Nerdearla.
 
-The problem:
+El problema:
 
-Large conferences may have many sessions happening simultaneously, including sessions in English that need to be accessible to Spanish-speaking audiences.
+Las conferencias grandes pueden tener muchas sesiones en simultáneo, incluidas sesiones en inglés que necesitan ser accesibles para un público hispanohablante.
 
-Existing solutions can be expensive, require manual operation, and do not scale easily across many simultaneous stages.
+Las soluciones existentes suelen ser caras, requieren operación manual y no escalan fácilmente a muchos escenarios simultáneos.
 
-OpenStage aims to provide an open-source infrastructure that allows a conference to:
+OpenStage busca ofrecer una infraestructura open source que le permita a una conferencia:
 
-1. Receive live audio from multiple sessions.
-2. Transcribe the original speech in real time.
-3. Translate English speech into Spanish in real time.
-4. Broadcast caption events to web clients.
-5. Allow multiple sessions to run simultaneously.
-6. Store the generated captions.
-7. Export the final transcript as SRT, VTT, or TXT.
-8. Provide a simple production/monitoring dashboard.
-9. Be deployable using Docker.
-10. Be understandable and reproducible by another open-source conference.
+1. Recibir audio en vivo de varias sesiones.
+2. Transcribir el discurso original en tiempo real.
+3. Traducir del inglés al español en tiempo real.
+4. Emitir eventos de subtítulos a clientes web.
+5. Permitir que varias sesiones corran en simultáneo.
+6. Almacenar los subtítulos generados.
+7. Exportar la transcripción final como SRT, VTT o TXT.
+8. Ofrecer un panel simple de producción/monitoreo.
+9. Poder desplegarse con Docker.
+10. Ser comprensible y reproducible por otra conferencia open source.
 
-The project is being developed as a hackathon MVP.
+El proyecto se desarrolla como un MVP de hackatón.
 
-The priority is a functional, understandable and demonstrable system rather than a production-scale enterprise platform.
+La prioridad es un sistema funcional, comprensible y demostrable, antes que una plataforma empresarial a escala productiva.
 
 ---
 
-# 2. Core Concept
+# 2. Concepto central
 
-The main abstraction is a `Session`.
+La abstracción principal es una `Session` (sesión).
 
-A conference can have many sessions:
+Una conferencia puede tener muchas sesiones:
 
 ```text
-Conference
+Conferencia
 │
-├── Session A
+├── Sesión A
 │   ├── Audio
-│   ├── Transcription
-│   └── Translation
+│   ├── Transcripción
+│   └── Traducción
 │
-├── Session B
+├── Sesión B
 │   ├── Audio
-│   ├── Transcription
-│   └── Translation
+│   ├── Transcripción
+│   └── Traducción
 │
-└── Session C
+└── Sesión C
     ├── Audio
-    ├── Transcription
-    └── Translation
+    ├── Transcripción
+    └── Traducción
 ```
 
-Each session must be isolated from other sessions.
+Cada sesión debe estar aislada de las demás.
 
-The system should be designed so that:
+El sistema debe diseñarse de manera que:
 
 ```text
-1 session = 1 independent processing pipeline
+1 sesión = 1 pipeline de procesamiento independiente
 ```
 
-Therefore:
+Por lo tanto:
 
 ```text
-N sessions
+N sesiones
     ↓
-N independent session workers/pipelines
+N workers/pipelines de sesión independientes
     ↓
-N AI/audio connections
+N conexiones de IA/audio
 ```
 
-The initial MVP must demonstrate at least two simultaneous sessions.
+El MVP inicial debe demostrar al menos dos sesiones simultáneas.
 
 ---
 
-# 3. High-Level Architecture
+# 3. Arquitectura general
 
-The intended architecture is:
+La arquitectura prevista es:
 
 ```text
                          ┌─────────────────────┐
-                         │      Audio Input    │
+                         │   Entrada de audio  │
                          │                     │
-                         │ Mic / File / Stream │
+                         │ Mic / Archivo /     │
+                         │ Stream              │
                          └──────────┬──────────┘
                                     │
                                     ▼
                          ┌─────────────────────┐
-                         │    Audio Worker     │
+                         │   Worker de audio   │
                          │                     │
-                         │ FFmpeg / processing │
+                         │ FFmpeg / proceso    │
                          └──────────┬──────────┘
                                     │
                                     ▼
                          ┌─────────────────────┐
-                         │    AI Provider      │
+                         │   Proveedor de IA   │
                          │                     │
                          │ Gemini Audio / Live │
                          └──────────┬──────────┘
                                     │
                                     ▼
                          ┌─────────────────────┐
-                         │   Caption Engine    │
+                         │ Motor de subtítulos │
                          │                     │
-                         │ original transcript │
-                         │ translation         │
+                         │ transcripción orig. │
+                         │ traducción          │
                          │ timestamps          │
                          └──────────┬──────────┘
                                     │
@@ -114,88 +115,88 @@ The intended architecture is:
                                     │
                     ┌───────────────┴───────────────┐
                     ▼                               ▼
-           Audience Web                       Admin Dashboard
+              Web del público                Panel de admin
 ```
 
-The system should be designed around events rather than tightly coupled request/response flows.
+El sistema debe diseñarse alrededor de eventos, y no de flujos request/response fuertemente acoplados.
 
 ---
 
-# 4. Main Components
+# 4. Componentes principales
 
 ## Frontend
 
-Technology:
+Tecnología:
 
 * React
 * TypeScript
 * Next.js
 * Tailwind CSS
 
-Responsibilities:
+Responsabilidades:
 
-* Display available sessions.
-* Allow users to select a session.
-* Display original captions.
-* Display translated captions.
-* Display session status.
-* Provide a production/admin dashboard.
-* Connect to the backend through WebSocket or SSE.
+* Mostrar las sesiones disponibles.
+* Permitir elegir una sesión.
+* Mostrar los subtítulos originales.
+* Mostrar los subtítulos traducidos.
+* Mostrar el estado de la sesión.
+* Ofrecer un panel de producción/admin.
+* Conectarse al backend por WebSocket o SSE.
 
-The frontend must NOT contain AI logic.
+El frontend NO debe contener lógica de IA.
 
-The frontend should consume normalized caption events from the backend.
+El frontend debe consumir eventos de subtítulos ya normalizados por el backend.
 
 ---
 
 # 5. Backend
 
-Preferred technology:
+Tecnología preferida:
 
 * Node.js
 * TypeScript
 
-Responsibilities:
+Responsabilidades:
 
-* Manage sessions.
-* Create and stop session workers.
-* Manage audio sources.
-* Communicate with Gemini.
-* Normalize AI responses.
-* Broadcast caption events.
-* Track session status.
-* Persist captions.
-* Provide APIs required by the frontend.
+* Gestionar las sesiones.
+* Crear y detener los workers de sesión.
+* Gestionar las fuentes de audio.
+* Comunicarse con Gemini.
+* Normalizar las respuestas de la IA.
+* Emitir los eventos de subtítulos.
+* Seguir el estado de cada sesión.
+* Persistir los subtítulos.
+* Exponer las APIs que necesita el frontend.
 
-The backend should be the central orchestrator.
+El backend debe ser el orquestador central.
 
 ---
 
-# 6. AI Layer
+# 6. Capa de IA
 
-The initial AI provider should be Gemini because the hackathon specifically recommends Gemini audio capabilities.
+El proveedor de IA inicial debe ser Gemini, porque el hackatón recomienda específicamente sus capacidades de audio.
 
-However, the code should avoid coupling the entire application directly to Gemini.
+Aun así, el código debe evitar acoplar toda la aplicación directamente a Gemini.
 
-Create an abstraction such as:
+Hay que crear una abstracción como:
 
 ```text
 TranscriptionProvider
 ```
 
-or:
+o:
 
 ```text
 SpeechProvider
 ```
 
-The first implementation can be:
+La primera implementación puede ser:
 
 ```text
 GeminiProvider
 ```
 
-Future providers could theoretically include:
+Proveedores futuros podrían ser, en teoría:
 
 ```text
 WhisperProvider
@@ -203,17 +204,17 @@ LocalGemmaProvider
 OtherProvider
 ```
 
-Do NOT implement those alternatives yet.
+NO implementar esas alternativas todavía.
 
-The goal is to keep the architecture replaceable without creating unnecessary abstraction.
+El objetivo es mantener la arquitectura reemplazable sin crear abstracciones innecesarias.
 
 ---
 
-# 7. Caption Event
+# 7. Evento de subtítulo
 
-The central data structure of OpenStage is the caption event.
+La estructura de datos central de OpenStage es el evento de subtítulo.
 
-A conceptual event:
+Un evento conceptual:
 
 ```json
 {
@@ -228,25 +229,25 @@ A conceptual event:
 }
 ```
 
-The exact schema may evolve during implementation.
+El esquema exacto puede evolucionar durante la implementación.
 
-Important properties:
+Propiedades importantes:
 
 * sessionId
 * timestamp
-* original text
-* translated text
-* source language
-* target language
-* whether the segment is final
+* texto original
+* texto traducido
+* idioma de origen
+* idioma de destino
+* si el segmento es final
 
-The frontend should rely on this normalized representation rather than raw Gemini responses.
+El frontend debe apoyarse en esta representación normalizada y no en las respuestas crudas de Gemini.
 
 ---
 
-# 8. Session Lifecycle
+# 8. Ciclo de vida de una sesión
 
-A session should conceptually move through states:
+Conceptualmente, una sesión debería pasar por estos estados:
 
 ```text
 CREATED
@@ -260,16 +261,16 @@ STOPPING
 COMPLETED
 ```
 
-Error state:
+Estado de error:
 
 ```text
 ERROR
 ```
 
-Example:
+Ejemplo:
 
 ```text
-Session A
+Sesión A
     CREATED
        ↓
     STARTING
@@ -279,47 +280,47 @@ Session A
    COMPLETED
 ```
 
-The system should expose enough status information for the admin dashboard.
+El sistema debe exponer suficiente información de estado para el panel de admin.
 
 ---
 
-# 9. Audio Sources
+# 9. Fuentes de audio
 
-The MVP must support at least one simple audio source.
+El MVP debe soportar al menos una fuente de audio simple.
 
-Preferred initial source:
+Fuente inicial preferida:
 
 ```text
-Local audio file
+Archivo de audio local
 ```
 
-For example:
+Por ejemplo:
 
 ```text
 /demo/audio/stage-a.mp3
 /demo/audio/stage-b.mp3
 ```
 
-This makes the project reproducible.
+Esto hace que el proyecto sea reproducible.
 
-The architecture should leave room for:
+La arquitectura debe dejar lugar para:
 
 ```text
-Microphone
-RTMP stream
-HLS stream
-Other streaming source
+Micrófono
+Stream RTMP
+Stream HLS
+Otras fuentes de streaming
 ```
 
-but these should NOT be implemented before the MVP works.
+pero NO deben implementarse antes de que el MVP funcione.
 
 ---
 
-# 10. Multi-session Architecture
+# 10. Arquitectura multi-sesión
 
-The MVP must demonstrate at least two simultaneous sessions.
+El MVP debe demostrar al menos dos sesiones simultáneas.
 
-Example:
+Ejemplo:
 
 ```text
 Stage A
@@ -329,7 +330,7 @@ Session Worker A
     ↓
 Gemini
     ↓
-Captions A
+Subtítulos A
 
 
 Stage B
@@ -339,75 +340,75 @@ Session Worker B
     ↓
 Gemini
     ↓
-Captions B
+Subtítulos B
 ```
 
-The sessions must remain logically isolated.
+Las sesiones deben permanecer lógicamente aisladas.
 
-A failure in one session should not crash the entire backend.
+Una falla en una sesión no debe tirar abajo todo el backend.
 
 ---
 
-# 11. WebSocket Communication
+# 11. Comunicación por WebSocket
 
-The backend should expose a real-time communication mechanism.
+El backend debe exponer un mecanismo de comunicación en tiempo real.
 
-Preferred:
+Preferido:
 
 ```text
 WebSocket
 ```
 
-Conceptually:
+Conceptualmente:
 
 ```text
-Browser
+Navegador
    │
    │ subscribe(sessionId)
    ▼
 Backend
    │
-   │ caption events
+   │ eventos de subtítulos
    ▼
-Browser
+Navegador
 ```
 
-Example:
+Ejemplo:
 
 ```text
 /ws/sessions/session-a
 ```
 
-or another clean routing mechanism.
+u otro mecanismo de ruteo prolijo.
 
-The exact implementation can be chosen during development.
+La implementación exacta se puede elegir durante el desarrollo.
 
 ---
 
-# 12. Storage
+# 12. Almacenamiento
 
-The MVP can initially use:
+Inicialmente el MVP puede usar:
 
 ```text
 SQLite
 ```
 
-or:
+o:
 
 ```text
 PostgreSQL
 ```
 
-Do not overengineer persistence.
+No sobredimensionar la persistencia.
 
-Potential entities:
+Entidades posibles:
 
 ```text
 Session
 Caption
 ```
 
-A session should contain information such as:
+Una sesión debería contener información como:
 
 ```text
 id
@@ -420,7 +421,7 @@ startedAt
 endedAt
 ```
 
-A caption should contain:
+Un subtítulo debería contener:
 
 ```text
 id
@@ -433,9 +434,9 @@ final
 
 ---
 
-# 13. Export
+# 13. Exportación
 
-After a session finishes, the system should be able to export:
+Cuando una sesión termina, el sistema debería poder exportar:
 
 ```text
 SRT
@@ -443,15 +444,15 @@ VTT
 TXT
 ```
 
-This is an optional feature but desirable because it demonstrates that the generated captions are useful beyond the live experience.
+Es una funcionalidad opcional pero deseable, porque demuestra que los subtítulos generados sirven más allá de la experiencia en vivo.
 
 ---
 
-# 14. Glossary
+# 14. Glosario
 
-A future/optional feature is a technical glossary.
+Una funcionalidad futura/opcional es un glosario técnico.
 
-Example:
+Ejemplo:
 
 ```text
 React
@@ -463,21 +464,21 @@ Nerdearla
 Vibeathon
 ```
 
-The glossary can be provided as contextual information to the AI provider.
+El glosario se puede pasar como información de contexto al proveedor de IA.
 
-The goal is to improve recognition and translation of:
+El objetivo es mejorar el reconocimiento y la traducción de:
 
-* technical terms
-* product names
-* project names
-* proper nouns
-* conference-specific vocabulary
+* términos técnicos
+* nombres de productos
+* nombres de proyectos
+* nombres propios
+* vocabulario específico de la conferencia
 
-Do not implement a complex glossary management system initially.
+No implementar inicialmente un sistema complejo de gestión de glosarios.
 
-A simple JSON configuration is enough for the MVP.
+Para el MVP alcanza con una configuración JSON simple.
 
-Example:
+Ejemplo:
 
 ```json
 {
@@ -492,11 +493,11 @@ Example:
 
 ---
 
-# 15. Admin Dashboard
+# 15. Panel de administración
 
-The admin dashboard should provide a simple production-oriented view.
+El panel de admin debe ofrecer una vista simple, orientada a producción.
 
-Example:
+Ejemplo:
 
 ```text
 OPENSTAGE CONTROL ROOM
@@ -504,48 +505,48 @@ OPENSTAGE CONTROL ROOM
 Stage A
 🟢 LIVE
 EN → ES
-Latency: 1.2s
-Captions: 1482
+Latencia: 1.2s
+Subtítulos: 1482
 
 Stage B
 🟢 LIVE
 EN → ES
-Latency: 1.4s
-Captions: 1291
+Latencia: 1.4s
+Subtítulos: 1291
 
 Stage C
 🔴 ERROR
-Audio disconnected
+Audio desconectado
 ```
 
-The dashboard should prioritize operational visibility.
+El panel debe priorizar la visibilidad operativa.
 
-It does not need advanced analytics.
+No necesita analítica avanzada.
 
 ---
 
-# 16. Audience Interface
+# 16. Interfaz del público
 
-The audience interface should be extremely simple.
+La interfaz del público debe ser extremadamente simple.
 
-Example:
+Ejemplo:
 
 ```text
 OPENSTAGE
 
-Choose a session:
+Elegí una sesión:
 
 [ AI Agents in Production ]
 [ React at Scale ]
 [ Open Source Communities ]
 
-Language:
+Idioma:
 
 🇬🇧 Original
 🇪🇸 Español
 ```
 
-After selecting a session:
+Después de elegir una sesión:
 
 ```text
 AI Agents in Production
@@ -559,43 +560,43 @@ ESPAÑOL
 Hoy vamos a hablar sobre...
 ```
 
-The audience should not need to understand the technical infrastructure.
+El público no debería necesitar entender la infraestructura técnica.
 
 ---
 
-# 17. Deployment
+# 17. Despliegue
 
-The project should be Docker-friendly.
+El proyecto debe ser amigable con Docker.
 
-Expected initial deployment:
+Despliegue inicial esperado:
 
 ```text
 Docker Compose
 ```
 
-Possible architecture:
+Arquitectura posible:
 
 ```text
 docker compose up
 ```
 
-Starting:
+Levantando:
 
 ```text
 web
 server
-database
+base de datos
 ```
 
-Do not introduce Kubernetes during the MVP.
+No introducir Kubernetes durante el MVP.
 
-The project may later be deployed to AWS EC2.
+Más adelante el proyecto podría desplegarse en AWS EC2.
 
 ---
 
-# 18. Repository Structure
+# 18. Estructura del repositorio
 
-Preferred starting structure:
+Estructura inicial preferida:
 
 ```text
 openstage/
@@ -626,50 +627,50 @@ openstage/
 └── package.json
 ```
 
-This structure may be adapted if the chosen framework requires it.
+Esta estructura puede adaptarse si el framework elegido lo requiere.
 
 ---
 
-# 19. Open Source
+# 19. Open source
 
-The project must be released under an OSI-approved license.
+El proyecto debe publicarse bajo una licencia aprobada por la OSI.
 
-Preferred:
+Preferida:
 
 ```text
 MIT
 ```
 
-The repository must include:
+El repositorio debe incluir:
 
 ```text
 LICENSE
 ```
 
-and the README must clearly explain:
+y el README debe explicar claramente:
 
-* what the project does
-* requirements
-* environment variables
-* Gemini credentials
-* how to run locally
-* how to run demo sessions
-* how to run two sessions simultaneously
-* how to scale sessions
-* architecture
-* limitations
+* qué hace el proyecto
+* requisitos
+* variables de entorno
+* credenciales de Gemini
+* cómo correrlo localmente
+* cómo correr las sesiones de demo
+* cómo correr dos sesiones en simultáneo
+* cómo escalar las sesiones
+* arquitectura
+* limitaciones
 
 ---
 
-# 20. Hackathon Constraints
+# 20. Restricciones del hackatón
 
-The project is being created specifically for a hackathon.
+El proyecto se crea específicamente para un hackatón.
 
-The solution itself must be developed during the hackathon period.
+La solución en sí debe desarrollarse durante el período del hackatón.
 
-Existing libraries and models may be used.
+Se pueden usar librerías y modelos existentes.
 
-The following are acceptable:
+Es aceptable usar:
 
 * Gemini
 * Whisper
@@ -679,155 +680,155 @@ The following are acceptable:
 * Node.js
 * Docker
 * PostgreSQL
-* other open-source libraries
+* otras librerías open source
 
-The custom value is in the OpenStage orchestration, architecture, UX and conference workflow.
-
----
-
-# 21. MVP Requirements
-
-Before adding optional features, the following must work:
-
-### Requirement 1
-
-Receive audio from at least one source.
-
-### Requirement 2
-
-Generate real-time transcription.
-
-### Requirement 3
-
-Generate English → Spanish translation.
-
-### Requirement 4
-
-Display subtitles.
-
-### Requirement 5
-
-Run at least two sessions simultaneously.
-
-### Requirement 6
-
-Explain how more sessions can be added.
-
-### Requirement 7
-
-Provide an open-source license.
-
-### Requirement 8
-
-Provide reproducible documentation.
-
-These requirements have absolute priority.
+El valor propio está en la orquestación, la arquitectura, la UX y el flujo de trabajo de conferencia de OpenStage.
 
 ---
 
-# 22. Optional Features
+# 21. Requisitos del MVP
 
-Only after the MVP works:
+Antes de agregar funcionalidades opcionales, tiene que funcionar lo siguiente:
 
-1. OBS integration.
-2. vMix integration.
-3. More languages.
-4. Technical glossary.
-5. SRT/VTT/TXT export.
-6. Production monitoring.
-7. Better latency metrics.
-8. Speaker identification.
-9. RTMP/HLS inputs.
+### Requisito 1
 
-Optional features must never compromise the MVP.
+Recibir audio de al menos una fuente.
+
+### Requisito 2
+
+Generar transcripción en tiempo real.
+
+### Requisito 3
+
+Generar traducción inglés → español.
+
+### Requisito 4
+
+Mostrar los subtítulos.
+
+### Requisito 5
+
+Correr al menos dos sesiones en simultáneo.
+
+### Requisito 6
+
+Explicar cómo agregar más sesiones.
+
+### Requisito 7
+
+Publicar una licencia open source.
+
+### Requisito 8
+
+Ofrecer documentación reproducible.
+
+Estos requisitos tienen prioridad absoluta.
 
 ---
 
-# 23. Product Positioning
+# 22. Funcionalidades opcionales
 
-Do not position OpenStage as:
+Sólo después de que el MVP funcione:
 
-> "An AI translator."
+1. Integración con OBS.
+2. Integración con vMix.
+3. Más idiomas.
+4. Glosario técnico.
+5. Exportación SRT/VTT/TXT.
+6. Monitoreo de producción.
+7. Mejores métricas de latencia.
+8. Identificación de oradores.
+9. Entradas RTMP/HLS.
 
-Position it as:
+Las funcionalidades opcionales nunca deben comprometer el MVP.
 
-> "Open-source infrastructure for real-time multilingual captions at conferences."
+---
 
-The key idea is:
+# 23. Posicionamiento del producto
+
+No posicionar a OpenStage como:
+
+> "Un traductor con IA."
+
+Posicionarlo como:
+
+> "Infraestructura open source para subtítulos multilingües en tiempo real en conferencias."
+
+La idea clave es:
 
 ```text
-ONE SESSION
+UNA SESIÓN
        ↓
-ONE PIPELINE
+UN PIPELINE
 
-MANY SESSIONS
+MUCHAS SESIONES
        ↓
-MANY INDEPENDENT PIPELINES
+MUCHOS PIPELINES INDEPENDIENTES
 ```
 
-This directly addresses conference-scale operation.
+Esto responde directamente a la operación a escala de conferencia.
 
 ---
 
-# 24. Demo Scenario
+# 24. Escenario del demo
 
-The demo should simulate two conference stages.
+El demo debe simular dos escenarios de conferencia.
 
 Stage A:
 
 ```text
 stage-a.mp3
-English
-English transcription
-Spanish translation
+Inglés
+Transcripción en inglés
+Traducción al español
 ```
 
 Stage B:
 
 ```text
 stage-b.mp3
-English
-English transcription
-Spanish translation
+Inglés
+Transcripción en inglés
+Traducción al español
 ```
 
-The dashboard should show:
+El panel debería mostrar:
 
 ```text
-2 SESSIONS ACTIVE
+2 SESIONES ACTIVAS
 
 🟢 Stage A
 🟢 Stage B
 ```
 
-A browser can connect to each session and see captions updating in real time.
+Un navegador puede conectarse a cada sesión y ver los subtítulos actualizándose en tiempo real.
 
 ---
 
-# 25. Development Philosophy
+# 25. Filosofía de desarrollo
 
-Priorities:
+Prioridades:
 
-1. Functional MVP.
-2. Simple architecture.
-3. Clear boundaries.
-4. Reproducibility.
-5. Good demo.
-6. Documentation.
-7. Optional features.
+1. MVP funcional.
+2. Arquitectura simple.
+3. Límites claros.
+4. Reproducibilidad.
+5. Buen demo.
+6. Documentación.
+7. Funcionalidades opcionales.
 
-Avoid premature optimization.
+Evitar la optimización prematura.
 
-Avoid unnecessary abstraction.
+Evitar abstracciones innecesarias.
 
-Avoid unnecessary dependencies.
+Evitar dependencias innecesarias.
 
-Avoid microservices unless a real requirement appears.
+Evitar microservicios salvo que aparezca un requisito real.
 
-Avoid implementing future functionality before the core pipeline works.
+Evitar implementar funcionalidad futura antes de que funcione el pipeline central.
 
-The guiding question should always be:
+La pregunta guía siempre debería ser:
 
-> "Does this help us demonstrate reliable real-time multilingual captions across multiple conference sessions?"
+> "¿Esto nos ayuda a demostrar subtítulos multilingües en tiempo real, confiables, a través de varias sesiones de conferencia?"
 
-If not, postpone it.
+Si no, posponerlo.

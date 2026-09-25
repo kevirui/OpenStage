@@ -2,45 +2,45 @@
 trigger: always_on
 ---
 
-# Frontend Rules
+# Reglas del frontend
 
-The frontend is responsible for presentation and user interaction.
+El frontend es responsable de la presentación y la interacción con la persona usuaria.
 
-It must not contain:
+No debe contener:
 
-* Gemini API calls
-* provider-specific AI logic
-* audio processing business logic
-* server credentials
+* llamadas a la API de Gemini
+* lógica de IA específica del proveedor
+* lógica de negocio de procesamiento de audio
+* credenciales del servidor
 
-## Audience UI
+## Interfaz del público
 
-Prioritize readability.
+Priorizar la legibilidad.
 
-The audience should immediately understand:
+El público debe entender de inmediato:
 
-* which session they are watching
-* which language they are viewing
-* what the latest caption is
-* whether the connection is active
+* qué sesión está viendo
+* en qué idioma la está viendo
+* cuál es el último subtítulo
+* si la conexión está activa
 
-## Admin UI
+## Interfaz de admin
 
-Prioritize operational visibility.
+Priorizar la visibilidad operativa.
 
-Show:
+Mostrar:
 
-* session
-* status
-* language
-* connection state
-* latency when available
-* caption count when available
+* sesión
+* estado
+* idioma
+* estado de conexión
+* latencia cuando esté disponible
+* cantidad de subtítulos cuando esté disponible
 
-## Styling
+## Estilos
 
-Keep the visual system simple.
+Mantener el sistema visual simple.
 
-Do not spend significant development time on visual polish before the MVP pipeline works.
+No dedicar tiempo significativo de desarrollo al pulido visual antes de que funcione el pipeline del MVP.
 
-Accessibility and readability are more important than decorative UI.
+La accesibilidad y la legibilidad son más importantes que la UI decorativa.

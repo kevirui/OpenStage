@@ -2,65 +2,65 @@
 trigger: always_on
 ---
 
-# Core Agent Rules
+# Reglas centrales del agente
 
-## Project priority
+## Prioridad del proyecto
 
-The primary goal is to build a functional hackathon MVP.
+El objetivo principal es construir un MVP de hackatón funcional.
 
-Always prioritize:
+Priorizar siempre:
 
-1. MVP requirements
-2. Reliability
-3. Simplicity
-4. Demoability
-5. Documentation
-6. Optional features
+1. Requisitos del MVP
+2. Confiabilidad
+3. Simplicidad
+4. Que se pueda demostrar
+5. Documentación
+6. Funcionalidades opcionales
 
-Do not sacrifice the MVP to implement optional functionality.
+No sacrificar el MVP para implementar funcionalidad opcional.
 
-## Before coding
+## Antes de escribir código
 
-Always:
+Siempre:
 
-1. Inspect the existing implementation.
-2. Understand the relevant architecture.
-3. Check existing types/interfaces.
-4. Reuse existing abstractions when appropriate.
-5. Make the smallest reasonable change.
+1. Inspeccionar la implementación existente.
+2. Entender la arquitectura relevante.
+3. Revisar los tipos/interfaces que ya existen.
+4. Reutilizar las abstracciones existentes cuando corresponda.
+5. Hacer el cambio más chico que sea razonable.
 
-## Avoid overengineering
+## Evitar sobreingeniería
 
-Do not introduce:
+No introducir:
 
-* unnecessary frameworks
-* unnecessary dependencies
-* microservices
+* frameworks innecesarios
+* dependencias innecesarias
+* microservicios
 * Kubernetes
 * Redis
-* complex dependency injection
-* event buses
+* inyección de dependencias compleja
+* buses de eventos
 * CQRS
-* elaborate design patterns
+* patrones de diseño elaborados
 
-unless there is a concrete requirement that justifies them.
+salvo que haya un requisito concreto que los justifique.
 
-## Source of truth
+## Fuente de verdad
 
-`PROJECT_CONTEXT.md` defines the intended product and architecture.
+`PROJECT_CONTEXT.md` define el producto y la arquitectura buscados.
 
-If implementation details conflict with the project context, preserve the core product requirements and explain the conflict before making major architectural changes.
+Si algún detalle de implementación entra en conflicto con el contexto del proyecto, preservar los requisitos centrales del producto y explicar el conflicto antes de hacer cambios arquitectónicos importantes.
 
-## Change discipline
+## Disciplina de cambios
 
-Do not rewrite unrelated code.
+No reescribir código no relacionado.
 
-Do not modify files unrelated to the current task unless necessary.
+No modificar archivos ajenos a la tarea actual salvo que sea necesario.
 
-After implementation:
+Después de implementar:
 
-* run type checking
-* run linting
-* run tests if available
+* correr el chequeo de tipos
+* correr el linter
+* correr los tests si existen
 
-Report errors instead of hiding them.
+Reportar los errores en lugar de esconderlos.

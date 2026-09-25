@@ -2,37 +2,37 @@
 trigger: always_on
 ---
 
-# Architecture Rules
+# Reglas de arquitectura
 
-OpenStage is organized around independent conference sessions.
+OpenStage se organiza alrededor de sesiones de conferencia independientes.
 
-The fundamental abstraction is:
+La abstracción fundamental es:
 
 ```text
 Session
 ```
 
-Each session represents an independent audio → AI → captions pipeline.
+Cada sesión representa un pipeline independiente audio → IA → subtítulos.
 
-## Boundaries
+## Límites
 
-Maintain clear boundaries between:
+Mantener límites claros entre:
 
 ```text
 Audio
-AI Provider
-Caption Processing
-Session Management
-Realtime Transport
-Persistence
+Proveedor de IA
+Procesamiento de subtítulos
+Gestión de sesiones
+Transporte en tiempo real
+Persistencia
 Frontend
 ```
 
-## AI provider isolation
+## Aislamiento del proveedor de IA
 
-Do not allow Gemini-specific structures to leak into the frontend or domain layer.
+No permitir que estructuras específicas de Gemini se filtren al frontend ni a la capa de dominio.
 
-Prefer:
+Preferir:
 
 ```text
 SpeechProvider
@@ -40,26 +40,26 @@ SpeechProvider
 GeminiProvider
 ```
 
-Provider-specific responses must be normalized into OpenStage domain events.
+Las respuestas específicas del proveedor deben normalizarse a eventos de dominio de OpenStage.
 
-## Shared contracts
+## Contratos compartidos
 
-Shared types used by frontend and backend should live in:
+Los tipos compartidos entre frontend y backend deben vivir en:
 
 ```text
 packages/shared
 ```
 
-Do not duplicate important domain types between applications.
+No duplicar tipos de dominio importantes entre aplicaciones.
 
-## Session isolation
+## Aislamiento de sesiones
 
-A failure in one session must not terminate unrelated sessions.
+Una falla en una sesión no debe terminar otras sesiones.
 
-Session-specific state should remain associated with the session.
+El estado propio de una sesión debe quedar asociado a esa sesión.
 
-## Simplicity
+## Simplicidad
 
-Prefer a modular monolith for the MVP.
+Preferir un monolito modular para el MVP.
 
-Do not split the system into microservices unless required.
+No dividir el sistema en microservicios salvo que sea necesario.
