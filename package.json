@@ -8,11 +8,12 @@
   "scripts": {
     "dev:server": "npm run dev --workspace=apps/server",
     "dev:web": "npm run dev --workspace=apps/web",
-    "dev": "concurrently \"npm:dev:server\" \"npm:dev:web\"",
-    "build": "npm run build --workspaces",
-    "typecheck": "npm run typecheck --workspaces",
-    "test": "npm run test --workspaces",
-    "demo:transcribe": "npm run demo:transcribe --workspace=apps/server",
+    "dev": "npm run build:shared && concurrently \"npm:dev:server\" \"npm:dev:web\"",
+    "build:shared": "npm run build --workspace=packages/shared",
+    "build": "npm run build:shared && npm run build --workspace=apps/server && npm run build --workspace=apps/web",
+    "typecheck": "npm run build:shared && npm run typecheck --workspaces",
+    "test": "npm run build:shared && npm run test --workspaces",
+    "demo:transcribe": "npm run build:shared && npm run demo:transcribe --workspace=apps/server",
     "lint": "npm run lint --workspaces"
   },
   "devDependencies": {

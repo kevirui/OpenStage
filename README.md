@@ -82,10 +82,10 @@ Execute the demo runner command:
 npm run demo:transcribe
 ```
 
-Or pass a custom audio path:
+Or pass a custom audio path (relative paths resolve from the repository root):
 
 ```bash
-npm run demo:transcribe -- workspace=apps/server demo/audio/stage-a.mp3
+npm run demo:transcribe -- demo/audio/stage-b.mp3
 ```
 
 ### 4. Expected Terminal Output
@@ -93,7 +93,7 @@ npm run demo:transcribe -- workspace=apps/server demo/audio/stage-a.mp3
 ```json
 === OpenStage Vertical Slice Demo: Gemini Speech & Translation ===
 
-🎙 Processing Audio File: E:\Apps\nerdearla\demo\audio\stage-a.mp3
+🎙 Processing Audio File: /path/to/openstage/demo/audio/stage-a.mp3
 🤖 Sending audio payload to Gemini API (gemini-2.5-flash)...
 
 ✨ [CaptionEvent Received]:
