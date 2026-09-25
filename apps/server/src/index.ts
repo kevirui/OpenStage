@@ -7,6 +7,7 @@ import { MockSpeechProvider } from './ai/MockSpeechProvider.js';
 import { CaptionNormalizer } from './captions/CaptionNormalizer.js';
 import { RealtimeServer } from './realtime/RealtimeServer.js';
 import { SessionManager } from './sessions/SessionManager.js';
+import { resolveFromRepoRoot } from './config/paths.js';
 
 const app = express();
 app.use(cors());
@@ -35,7 +36,7 @@ async function seedDemoSessions() {
     targetLanguage: 'es',
     audioSource: {
       type: 'file',
-      path: 'demo/audio/stage-a.mp3',
+      path: resolveFromRepoRoot('demo/audio/stage-a.mp3'),
     },
   });
 
@@ -46,7 +47,7 @@ async function seedDemoSessions() {
     targetLanguage: 'es',
     audioSource: {
       type: 'file',
-      path: 'demo/audio/stage-b.mp3',
+      path: resolveFromRepoRoot('demo/audio/stage-b.mp3'),
     },
   });
 

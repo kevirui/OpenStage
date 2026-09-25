@@ -1,10 +1,11 @@
 import dotenv from 'dotenv';
-import path from 'path';
 import fs from 'fs';
 import { GeminiSpeechProvider } from '../ai/GeminiSpeechProvider.js';
 import { CaptionNormalizer } from '../captions/CaptionNormalizer.js';
 import { AudioSourceManager } from '../audio/AudioSourceManager.js';
+import { resolveFromRepoRoot, rootEnvPath } from '../config/paths.js';
 
+dotenv.config({ path: rootEnvPath });
 dotenv.config();
 
 async function runDemo() {
@@ -13,15 +14,13 @@ async function runDemo() {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     console.error('❌ Error: GEMINI_API_KEY is not set.');
-    console.error('Please create a .env file or export GEMINI_API_KEY in your environment.');
+    console.error(`Please create a .env file at ${rootEnvPath} or export GEMINI_API_KEY in your environment.`);
     console.error('Example: GEMINI_API_KEY=your_google_gemini_api_key\n');
     process.exit(1);
   }
 
   const audioPath = process.argv[2] || 'demo/audio/stage-a.mp3';
-  const resolvedAudioPath = path.isAbsolute(audioPath)
-    ? audioPath
-    : path.resolve(process.cwd(), audioPath);
+  const resolvedAudioPath = resolveFromRepoRoot(audioPath);
 
   const audioSourceManager = new AudioSourceManager();
   const isValidSource = audioSourceManager.validateSource({

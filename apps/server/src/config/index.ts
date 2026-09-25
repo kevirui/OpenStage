@@ -1,5 +1,7 @@
 import dotenv from 'dotenv';
+import { rootEnvPath } from './paths.js';
 
+dotenv.config({ path: rootEnvPath });
 dotenv.config();
 
 export const config = {
