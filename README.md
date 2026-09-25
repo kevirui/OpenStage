@@ -1,124 +1,124 @@
 # OpenStage
 
-Open-source infrastructure for real-time multilingual captions at conferences.
+Infraestructura open source para subtítulos multilingües en tiempo real en conferencias.
 
-## The problem
+## El problema
 
-A conference runs several stages at the same time. Talks are in English, part of the audience reads Spanish, and human captioning/interpretation for every stage is expensive and hard to schedule. Attendees end up with no captions at all, or with captions on the main stage only.
+Una conferencia tiene varios escenarios en simultáneo. Las charlas son en inglés, parte del público lee en español, y subtitular o interpretar cada escenario con personas es caro y difícil de coordinar. El resultado habitual es que el público se queda sin subtítulos, o que sólo el escenario principal los tiene.
 
-## The solution
+## La solución
 
-OpenStage treats every stage as an independent session. Its audio is transcribed and translated while the talk happens, and the resulting captions are pushed to any browser watching that session:
+OpenStage trata cada escenario como una sesión independiente. Su audio se transcribe y se traduce mientras la charla sucede, y los subtítulos resultantes se envían a cualquier navegador que esté siguiendo esa sesión:
 
 ```text
 Audio
  ↓
-Real-time speech processing (Gemini Live)
+Procesamiento de voz en tiempo real (Gemini Live)
  ↓
-English → Spanish translation
+Traducción inglés → español
  ↓
 CaptionEvent → WebSocket
  ↓
-Live audience captions in the browser
+Subtítulos en vivo en el navegador del público
 ```
 
-## Features (implemented today)
+## Funcionalidades (implementadas hoy)
 
-- Incremental transcription: audio is streamed to Gemini Live in 200 ms PCM chunks, captions appear while the audio is still playing.
-- English → Spanish translation delivered incrementally alongside the original.
-- Live browser captions at `/session/<id>`, with original and translation side by side, connection state and session lifecycle.
-- WebSocket delivery with per-session subscriptions — a client subscribed to `stage-a` never receives `stage-b` events.
-- Two concurrent, fully isolated sessions (own worker, audio source, Gemini connection, lifecycle and caption stream).
-- Per-session failure isolation: one session can fail without stopping the other.
-- Terminal demo runners for a single session and for two concurrent sessions.
-- Deterministic unit tests that never call the Gemini API.
-- MIT licensed, no secrets in the repository.
+- Transcripción incremental: el audio se envía a Gemini Live en chunks PCM de 200 ms y los subtítulos aparecen mientras el audio sigue sonando.
+- Traducción inglés → español entregada de forma incremental junto al original.
+- Subtítulos en vivo en el navegador en `/session/<id>`, con original y traducción lado a lado, estado de conexión y ciclo de vida de la sesión.
+- Entrega por WebSocket con suscripciones por sesión: un cliente suscripto a `stage-a` nunca recibe eventos de `stage-b`.
+- Dos sesiones concurrentes completamente aisladas (worker, fuente de audio, conexión a Gemini, ciclo de vida y stream de subtítulos propios).
+- Aislamiento de fallos por sesión: una sesión puede fallar sin detener a la otra.
+- Demos por terminal para una sesión y para dos sesiones concurrentes.
+- Tests unitarios deterministas que nunca llaman a la API de Gemini.
+- Licencia MIT, sin secretos en el repositorio.
 
-Not implemented (and not claimed): microphone / live conference audio input, more than two concurrent sessions verified end to end, horizontal scaling across backend instances, persistent storage, authentication, SRT/VTT export, OBS/vMix or RTMP/HLS input, speaker identification, glossary injection.
+No implementado (y no lo afirmamos): entrada por micrófono / audio de conferencia en vivo, más de dos sesiones concurrentes verificadas end to end, escalado horizontal entre instancias del backend, almacenamiento persistente, autenticación, exportación SRT/VTT, entrada OBS/vMix o RTMP/HLS, identificación de oradores, inyección de glosario.
 
-## Architecture
+## Arquitectura
 
 ```text
                  OpenStage
                      │
               SessionManager
                 /          \
-        Session A          Session B
+        Sesión A           Sesión B
             │                  │
-        Audio A             Audio B      (FileAudioChunkSource + ffmpeg → 16 kHz PCM)
+        Audio A             Audio B      (FileAudioChunkSource + ffmpeg → PCM 16 kHz)
             │                  │
-         Gemini A           Gemini B     (GeminiSpeechProvider, one Live connection each)
+         Gemini A           Gemini B     (GeminiSpeechProvider, una conexión Live cada una)
             │                  │
       CaptionEvents      CaptionEvents   (CaptionNormalizer)
             │                  │
-       WebSocket A        WebSocket B    (RealtimeServer, subscriptions per sessionId)
+       WebSocket A        WebSocket B    (RealtimeServer, suscripciones por sessionId)
             │                  │
-        Browser A          Browser B
+      Navegador A        Navegador B
 ```
 
-Domain boundaries: `packages/shared` holds framework-independent types (`Session`, `CaptionEvent`, `SpeechProvider`, `AudioChunk`, WebSocket messages). The server depends on those abstractions only — no Gemini type ever crosses into `shared` or reaches the browser, and the frontend receives normalized `CaptionEvent`s and never sees `GEMINI_API_KEY`.
+Límites de dominio: `packages/shared` contiene los tipos independientes del framework (`Session`, `CaptionEvent`, `SpeechProvider`, `AudioChunk`, mensajes de WebSocket). El servidor depende sólo de esas abstracciones: ningún tipo de Gemini cruza hacia `shared` ni llega al navegador, y el frontend recibe `CaptionEvent` normalizados y nunca ve la `GEMINI_API_KEY`.
 
-## Running locally
+## Ejecución local
 
-### Prerequisites
+### Requisitos previos
 
-- Node.js 20+ and npm 10+
-- `ffmpeg` (`apt install ffmpeg` / `brew install ffmpeg`) — Gemini Live only accepts raw PCM, so it decodes the demo recordings. Override its location with `FFMPEG_PATH`.
-- A Google AI Studio key with access to the Gemini Live API.
+- Node.js 20+ y npm 10+
+- `ffmpeg` (`apt install ffmpeg` / `brew install ffmpeg`): Gemini Live sólo acepta PCM crudo, así que ffmpeg decodifica las grabaciones de demo. Podés indicar otra ubicación con `FFMPEG_PATH`.
+- Una API key de Google AI Studio con acceso a la Gemini Live API.
 
-### Setup
+### Instalación
 
 ```bash
 npm install
-cp .env.example .env     # then fill in GEMINI_API_KEY
+cp .env.example .env     # después completá GEMINI_API_KEY
 ```
 
-Place two local recordings (English speech, any length; nothing is downloaded automatically, and the only audio committed to this repository is a talk included with its speaker's permission):
+Colocá dos grabaciones locales (voz en inglés, de cualquier duración; no se descarga nada automáticamente, y el único audio commiteado en este repositorio es una charla incluida con permiso de su oradora):
 
 ```bash
-demo/audio/stage-a.mp3   # session `stage-a`
-demo/audio/stage-b.mp3   # session `stage-b`
+demo/audio/stage-a.mp3   # sesión `stage-a`
+demo/audio/stage-b.mp3   # sesión `stage-b`
 ```
 
-Two different recordings make the concurrency obvious, but the same file may be copied to both paths.
+Usar dos grabaciones distintas hace evidente la concurrencia, pero se puede copiar el mismo archivo en ambas rutas.
 
-### Start
+### Arranque
 
 ```bash
-npm run dev              # backend on :4000 + web app on :3000
+npm run dev              # backend en :4000 + aplicación web en :3000
 ```
 
-- Sessions: [http://localhost:3000](http://localhost:3000)
-- Stage A captions: [http://localhost:3000/session/stage-a](http://localhost:3000/session/stage-a)
-- Stage B captions: [http://localhost:3000/session/stage-b](http://localhost:3000/session/stage-b)
+- Sesiones: [http://localhost:3000](http://localhost:3000)
+- Subtítulos de Stage A: [http://localhost:3000/session/stage-a](http://localhost:3000/session/stage-a)
+- Subtítulos de Stage B: [http://localhost:3000/session/stage-b](http://localhost:3000/session/stage-b)
 - Admin: [http://localhost:3000/admin](http://localhost:3000/admin)
 
-`npm install` + `npm run dev` is the recommended path. Docker Compose is available as an alternative (`docker compose up --build`); it mounts `./demo` read-only so your local recordings are visible to the container and reads `GEMINI_API_KEY` from your environment or root `.env`.
+`npm install` + `npm run dev` es el camino recomendado. Docker Compose está disponible como alternativa (`docker compose up --build`): monta `./demo` en sólo lectura para que el contenedor vea tus grabaciones locales y toma `GEMINI_API_KEY` de tu entorno o del `.env` de la raíz.
 
-## Environment variables
+## Variables de entorno
 
-| Variable | Required | Purpose |
+| Variable | Requerida | Para qué sirve |
 | --- | --- | --- |
-| `GEMINI_API_KEY` | yes (for real captions) | Gemini Live access. Without it the backend still starts and serves **mock** captions, and the admin page says so. |
-| `GEMINI_LIVE_MODEL` | no | Live model override. Default `gemini-3.5-live-translate-preview`: its input transcription is the English original, its output transcription the Spanish translation. |
-| `FFMPEG_PATH` | no | Path to the ffmpeg binary. |
-| `PORT` | no | Backend port (default 4000). |
-| `NEXT_PUBLIC_SERVER_URL` / `NEXT_PUBLIC_WS_URL` | no | Where the browser reaches the backend. |
+| `GEMINI_API_KEY` | sí (para subtítulos reales) | Acceso a Gemini Live. Sin ella el backend igual arranca y sirve subtítulos **mock**, y la página de admin lo aclara. |
+| `GEMINI_LIVE_MODEL` | no | Modelo Live alternativo. Por defecto `gemini-3.5-live-translate-preview`: su transcripción de entrada es el original en inglés y la de salida, la traducción al español. |
+| `FFMPEG_PATH` | no | Ruta al binario de ffmpeg. |
+| `PORT` | no | Puerto del backend (4000 por defecto). |
+| `NEXT_PUBLIC_SERVER_URL` / `NEXT_PUBLIC_WS_URL` | no | Dónde encuentra el navegador al backend. |
 
-See `.env.example`. `.env` is git-ignored; never commit a key.
+Ver `.env.example`. `.env` está ignorado por git; nunca commitees una key.
 
 ## Demo
 
-### Two concurrent sessions (main demo)
+### Dos sesiones concurrentes (demo principal)
 
 1. `npm run dev`
-2. Open `/session/stage-a` and `/session/stage-b` in two browser tabs or windows.
-3. In a third terminal:
+2. Abrí `/session/stage-a` y `/session/stage-b` en dos pestañas o ventanas del navegador.
+3. En una tercera terminal:
    ```bash
    npm run demo:multi-session
    ```
 
-The runner subscribes to both sessions over WebSocket, starts them without waiting for each other, and labels every caption, so interleaved output proves both pipelines are active:
+El runner se suscribe a ambas sesiones por WebSocket, las inicia sin que una espere a la otra y etiqueta cada subtítulo, así la salida intercalada demuestra que ambos pipelines están activos:
 
 ```text
 [STAGE-A] STARTING
@@ -131,23 +131,23 @@ The runner subscribes to both sessions over WebSocket, starts them without waiti
 [STAGE-A] [00:06] ES: Nuestro objetivo es que cada charla sea accesible.
 ```
 
-It exits non-zero if either session ends in `ERROR`. Run a different pair with `npm run demo:multi-session -- stage-a demo-session`.
+Termina con código distinto de cero si alguna sesión finaliza en `ERROR`. Para correr otro par: `npm run demo:multi-session -- stage-a demo-session`.
 
-### Single session
+### Una sola sesión
 
 ```bash
-npm run demo:stream          # one seeded session to the browser (/session/demo-session)
-npm run demo:transcribe      # one session straight to the terminal, no server needed
+npm run demo:stream          # una sesión precargada hacia el navegador (/session/demo-session)
+npm run demo:transcribe      # una sesión directo a la terminal, sin servidor
 ```
 
-### WebSocket protocol
+### Protocolo WebSocket
 
 ```jsonc
-// client → server
+// cliente → servidor
 { "type": "subscribe",   "sessionId": "stage-a" }
 { "type": "unsubscribe", "sessionId": "stage-a" }
 
-// server → client
+// servidor → cliente
 { "type": "subscribed", "sessionId": "stage-a", "status": "CREATED" }
 { "type": "session",    "sessionId": "stage-a", "status": "LIVE" }
 { "type": "caption",    "event": { "sessionId": "stage-a", "timestamp": 12345,
@@ -155,78 +155,78 @@ npm run demo:transcribe      # one session straight to the terminal, no server n
                                    "language": "en", "targetLanguage": "es", "final": false } }
 ```
 
-Interim captions carry `final: false` and are replaced in place; a finalized segment arrives with `final: true` and is appended to the transcript.
+Los subtítulos parciales llegan con `final: false` y se reemplazan en el lugar; un segmento finalizado llega con `final: true` y se agrega a la transcripción.
 
-### Session isolation
+### Aislamiento de sesiones
 
-`SessionManager.startSession(id)` builds a fresh `SessionWorker`, which owns its own `SpeechProvider` (one Gemini Live connection), its own `AudioChunkSource` and its own caption callback. Status is tracked per session id, captions are broadcast only to clients subscribed to that id, and a failing session transitions to `ERROR` on its own while the other keeps streaming. When a session ends, its worker closes the Gemini stream, abandons the audio pump and is removed from the active map.
+`SessionManager.startSession(id)` construye un `SessionWorker` nuevo, dueño de su propio `SpeechProvider` (una conexión a Gemini Live), su propio `AudioChunkSource` y su propio callback de subtítulos. El estado se sigue por id de sesión, los subtítulos se emiten sólo a los clientes suscriptos a ese id, y una sesión que falla pasa a `ERROR` por su cuenta mientras la otra sigue transmitiendo. Cuando una sesión termina, su worker cierra el stream de Gemini, abandona el bombeo de audio y se elimina del mapa de workers activos.
 
-## Scaling
+## Escalado
 
-**Current implementation:** sessions are concurrent async pipelines inside a single Node.js process, with in-memory session state.
+**Implementación actual:** las sesiones son pipelines asíncronos concurrentes dentro de un único proceso Node.js, con estado de sesión en memoria.
 
 ```text
-1 session  = 1 SessionWorker
-2 sessions = 2 SessionWorkers
-N sessions = N independent workers (one process, bounded by Gemini quota and CPU)
+1 sesión  = 1 SessionWorker
+2 sesiones = 2 SessionWorkers
+N sesiones = N workers independientes (un proceso, limitado por la cuota de Gemini y la CPU)
 ```
 
-**Future scaling architecture (not implemented):** the same worker model can be distributed — several backend instances behind a load balancer, each running a subset of the workers, with shared coordination (which instance owns which session) and a shared message layer so any instance can serve the WebSocket clients of any session. OpenStage does not implement this today and does not support unlimited sessions.
+**Arquitectura de escalado futura (no implementada):** el mismo modelo de workers se puede distribuir — varias instancias del backend detrás de un balanceador de carga, cada una corriendo un subconjunto de los workers, con una coordinación compartida (qué instancia es dueña de qué sesión) y una capa de mensajería compartida para que cualquier instancia pueda atender a los clientes WebSocket de cualquier sesión. OpenStage no implementa esto hoy y no soporta sesiones ilimitadas.
 
-## Demo Recording
+## Grabación del demo
 
-A 60–120 second walkthrough:
+Un recorrido de 60 a 120 segundos:
 
-- **0:00–0:10** — Home page. "OpenStage is open-source infrastructure for real-time multilingual conference captions."
-- **0:10–0:25** — Open Session A, start the demo (`npm run demo:multi-session`), show English and Spanish captions appearing progressively.
-- **0:25–0:40** — Switch to Session B, already running at the same time with its own content.
-- **0:40–0:55** — Put both windows side by side: each session shows only its own captions.
-- **0:55–1:15** — Show the pipeline diagram: audio → SessionWorker → Gemini → CaptionEvent → WebSocket → browser.
-- **1:15–1:30** — Show the multi-session diagram (Session A → Worker A, Session B → Worker B) and note that the same worker model can be distributed across backend instances as sessions grow.
+- **0:00–0:10** — Página de inicio. "OpenStage es infraestructura open source para subtítulos multilingües de conferencias en tiempo real."
+- **0:10–0:25** — Abrir la Sesión A, iniciar el demo (`npm run demo:multi-session`) y mostrar los subtítulos en inglés y español apareciendo progresivamente.
+- **0:25–0:40** — Pasar a la Sesión B, que ya está corriendo al mismo tiempo con su propio contenido.
+- **0:40–0:55** — Poner ambas ventanas lado a lado: cada sesión muestra solamente sus propios subtítulos.
+- **0:55–1:15** — Mostrar el diagrama del pipeline: audio → SessionWorker → Gemini → CaptionEvent → WebSocket → navegador.
+- **1:15–1:30** — Mostrar el diagrama multi-sesión (Sesión A → Worker A, Sesión B → Worker B) y comentar que el mismo modelo de workers se puede distribuir entre instancias del backend a medida que crecen las sesiones.
 
-Keep source code on screen for a few seconds at most.
+Mostrá código fuente en pantalla unos pocos segundos como mucho.
 
-## Repository structure
+## Estructura del repositorio
 
 ```text
 openstage/
 ├── apps/
-│   ├── server/          # Express + WebSocket backend: sessions, audio, ai, captions, realtime
-│   └── web/             # Next.js 14 app: / (sessions), /session/[id] (audience), /admin
+│   ├── server/          # Backend Express + WebSocket: sessions, audio, ai, captions, realtime
+│   └── web/             # App Next.js 14: / (sesiones), /session/[id] (público), /admin
 ├── packages/
-│   └── shared/          # Framework-independent domain types and interfaces
+│   └── shared/          # Tipos e interfaces de dominio, independientes del framework
 ├── demo/
-│   ├── audio/           # Your local recordings (git-ignored): stage-a.mp3, stage-b.mp3
-│   └── glossary.json    # Technical glossary (not yet injected into prompts)
-├── .agent/rules/        # Project coding & architectural rules
+│   ├── audio/           # Tus grabaciones locales (ignoradas por git): stage-a.mp3, stage-b.mp3
+│   └── glossary.json    # Glosario técnico (todavía no se inyecta en los prompts)
+├── .agent/rules/        # Reglas de código y arquitectura del proyecto
 ├── docker-compose.yml
 ├── .env.example
 ├── PROJECT_CONTEXT.md
 └── LICENSE
 ```
 
-## Quality checks
+## Chequeos de calidad
 
 ```bash
 npm run typecheck
-npm test        # deterministic, no Gemini calls
+npm test        # deterministas, sin llamadas a Gemini
 npm run build
 ```
 
-`npm run lint` is not usable today: ESLint was never configured for `apps/web` (`next lint` drops into its interactive setup wizard) and `packages/shared` has no `lint` script.
+`npm run lint` no es usable hoy: nunca se configuró ESLint para `apps/web` (`next lint` abre su asistente interactivo de configuración) y `packages/shared` no tiene script `lint`.
 
-## Known limitations
+## Limitaciones conocidas
 
-- Demo audio files instead of a physical conference microphone.
-- In-memory session state: restarting the backend resets everything.
-- Single backend instance; horizontal scaling is described conceptually only.
-- Two concurrent sessions verified end to end; more is untested.
-- A session stays in `STOPPING` for up to ~40 s while Gemini flushes trailing captions.
-- Caption completeness depends on the Gemini Live API: on a free-tier key, running two
-  sessions at once occasionally returns a truncated transcript (or none at all) for one
-  of them, while the same audio processed alone transcribes in full.
-- One language pair (English → Spanish).
+- Archivos de audio de demo en lugar de un micrófono físico de conferencia.
+- Estado de sesión en memoria: reiniciar el backend borra todo.
+- Una sola instancia del backend; el escalado horizontal está descripto sólo conceptualmente.
+- Dos sesiones concurrentes verificadas end to end; más de dos no está probado.
+- Una sesión queda en `STOPPING` hasta ~40 s mientras Gemini vacía los subtítulos finales.
+- La completitud de los subtítulos depende de la Gemini Live API: con una key de nivel gratuito,
+  correr dos sesiones a la vez a veces devuelve una transcripción truncada (o ninguna) para una
+  de ellas, mientras que el mismo audio procesado solo se transcribe completo.
+- Un único par de idiomas (inglés → español).
 
-## License
+## Licencia
 
-Released under the [MIT License](LICENSE).
+Publicado bajo la [licencia MIT](LICENSE).

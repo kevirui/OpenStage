@@ -2,30 +2,30 @@
 trigger: always_on
 ---
 
-# Backend Rules
+# Reglas del backend
 
-The backend is the central orchestrator.
+El backend es el orquestador central.
 
-It is responsible for:
+Es responsable de:
 
-* session lifecycle
-* audio processing
-* AI provider communication
-* caption normalization
-* realtime broadcasting
-* persistence
+* el ciclo de vida de las sesiones
+* el procesamiento de audio
+* la comunicación con el proveedor de IA
+* la normalización de subtítulos
+* la emisión en tiempo real
+* la persistencia
 
-## API design
+## Diseño de la API
 
-Use explicit APIs.
+Usar APIs explícitas.
 
-Do not expose provider-specific AI responses.
+No exponer respuestas de IA específicas del proveedor.
 
-The frontend consumes OpenStage domain objects/events.
+El frontend consume objetos/eventos de dominio de OpenStage.
 
-## Session lifecycle
+## Ciclo de vida de la sesión
 
-Sessions should support states such as:
+Las sesiones deben soportar estados como:
 
 ```text
 CREATED
@@ -36,28 +36,28 @@ COMPLETED
 ERROR
 ```
 
-Do not create unnecessary state transitions.
+No crear transiciones de estado innecesarias.
 
-## Realtime
+## Tiempo real
 
-Prefer WebSocket for live caption delivery.
+Preferir WebSocket para la entrega de subtítulos en vivo.
 
-Caption events should be normalized before broadcasting.
+Los eventos de subtítulos deben normalizarse antes de emitirse.
 
-## Errors
+## Errores
 
-Errors should be:
+Los errores deben ser:
 
-* explicit
-* observable
-* associated with the relevant session when possible
+* explícitos
+* observables
+* asociados a la sesión correspondiente cuando sea posible
 
-One failed session should not crash the entire backend.
+Una sesión que falla no debe tirar abajo todo el backend.
 
-## Configuration
+## Configuración
 
-Secrets must come from environment variables.
+Los secretos deben venir de variables de entorno.
 
-Never hardcode API keys or credentials.
+Nunca hardcodear API keys ni credenciales.
 
-Never commit `.env` files containing secrets.
+Nunca commitear archivos `.env` con secretos.

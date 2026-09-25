@@ -1,15 +1,16 @@
-# Demo Audio Files
+# Archivos de audio para el demo
 
-Audio files in this directory are git-ignored by default: OpenStage does not
-redistribute conference recordings it has no rights to, and nothing is
-downloaded automatically. The one committed recording
-(`Del código a la narrativa... - Abigail Carmio.mp3`) is included with the
-speaker's permission.
+Los archivos de audio de este directorio están ignorados por git por defecto:
+OpenStage no redistribuye grabaciones de conferencias sobre las que no tiene
+derechos, y no descarga nada automáticamente. La única grabación commiteada
+(`Del código a la narrativa... - Abigail Carmio.mp3`) se incluye con permiso
+de su oradora.
 
-Provide your own English-speech recordings before running the demos:
+Poné tus propias grabaciones con voz en inglés antes de correr los demos:
 
-- `stage-a.mp3` — session `stage-a` (also used by `demo-session`)
-- `stage-b.mp3` — session `stage-b`
+- `stage-a.mp3` — sesión `stage-a` (también la usa `demo-session`)
+- `stage-b.mp3` — sesión `stage-b`
 
-`ffmpeg` decodes them into the 16 kHz mono PCM that the Gemini Live API expects,
-so any format ffmpeg can read works if you point the session at it.
+`ffmpeg` las decodifica al PCM mono de 16 kHz que espera la Gemini Live API,
+así que sirve cualquier formato que ffmpeg pueda leer mientras apuntes la
+sesión a ese archivo.

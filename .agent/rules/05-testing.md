@@ -2,31 +2,31 @@
 trigger: always_on
 ---
 
-# Testing Rules
+# Reglas de testing
 
-The MVP must prioritize tests around the core domain.
+El MVP debe priorizar los tests alrededor del dominio central.
 
-At minimum, test:
+Como mínimo, testear:
 
-* session creation
-* session lifecycle
-* caption event normalization
-* session isolation
-* basic provider error handling
+* la creación de sesiones
+* el ciclo de vida de las sesiones
+* la normalización de eventos de subtítulos
+* el aislamiento entre sesiones
+* el manejo básico de errores del proveedor
 
-Provider integration tests may use mocks.
+Los tests de integración con el proveedor pueden usar mocks.
 
-Do not require real Gemini API calls for the normal test suite.
+La suite de tests habitual no debe requerir llamadas reales a la API de Gemini.
 
-## Demo testing
+## Testing del demo
 
-The project must eventually support two demo audio sources:
+El proyecto debe poder usar dos fuentes de audio de demo:
 
 ```text
 stage-a
 stage-b
 ```
 
-Both should be capable of running simultaneously.
+Ambas deben poder correr en simultáneo.
 
-The demo should be reproducible without specialized hardware.
+El demo debe ser reproducible sin hardware especializado.

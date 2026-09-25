@@ -2,35 +2,37 @@
 trigger: always_on
 ---
 
-# Documentation Rules
+# Reglas de documentación
 
-Documentation is part of the product.
+La documentación es parte del producto.
 
-README.md must remain synchronized with the implementation.
+`README.md` debe mantenerse sincronizado con la implementación.
 
-Never claim a feature is implemented if it is not working.
+Nunca afirmar que una funcionalidad está implementada si no está funcionando.
 
-Use explicit sections:
+Usar secciones explícitas:
 
 ```text
-Implemented
-Planned
-Optional
+Implementado
+Planeado
+Opcional
 ```
 
-The README should explain:
+El README debe explicar:
 
-* what OpenStage is
-* why it exists
-* architecture
-* setup
-* environment variables
-* local development
-* demo
-* multi-session architecture
-* scaling approach
-* limitations
+* qué es OpenStage
+* por qué existe
+* la arquitectura
+* la instalación
+* las variables de entorno
+* el desarrollo local
+* el demo
+* la arquitectura multi-sesión
+* el enfoque de escalado
+* las limitaciones
 
-Prefer diagrams and examples when they make the architecture easier to understand.
+Preferir diagramas y ejemplos cuando hagan más fácil entender la arquitectura.
 
-When changing architecture, update the relevant documentation.
+Al cambiar la arquitectura, actualizar la documentación correspondiente.
+
+La documentación del proyecto se escribe en español.
