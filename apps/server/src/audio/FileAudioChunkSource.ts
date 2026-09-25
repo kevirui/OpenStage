@@ -41,7 +41,9 @@ export class FileAudioChunkSource implements AudioChunkSource {
     this.chunkDurationMs = options.chunkDurationMs ?? 200;
     this.realtime = options.realtime ?? true;
     this.ffmpegPath = options.ffmpegPath ?? process.env.FFMPEG_PATH ?? 'ffmpeg';
-    this.trailingSilenceMs = options.trailingSilenceMs ?? 1500;
+    // The translation trails the original by a few seconds, so the silence has
+    // to outlast that lag or the last words are never translated.
+    this.trailingSilenceMs = options.trailingSilenceMs ?? 4000;
   }
 
   async *chunks(): AsyncGenerator<AudioChunk> {

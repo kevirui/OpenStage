@@ -58,9 +58,16 @@ export default function HomePage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Available Sessions</h1>
-        <p className="text-slate-400">Select a session to view real-time captions and translations.</p>
+        <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-white mb-3">
+          Real-time multilingual captions for conferences
+        </h1>
+        <p className="text-slate-400 max-w-2xl">
+          Each stage is processed independently: its audio is transcribed and translated as it plays, and the captions
+          are pushed to this page over a session-scoped WebSocket. Open a session below to follow it live.
+        </p>
       </div>
+
+      <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400">Sessions</h2>
 
       {loading ? (
         <div className="text-slate-400">Loading sessions...</div>

@@ -1,5 +1,8 @@
 FROM node:20-alpine AS base
 
+# ffmpeg decodes the demo recordings into the raw PCM the Gemini Live API expects.
+RUN apk add --no-cache ffmpeg
+
 WORKDIR /app
 
 COPY package.json package-lock.json* ./

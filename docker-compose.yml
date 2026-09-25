@@ -11,6 +11,10 @@ services:
       - PORT=4000
       - NODE_ENV=production
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_LIVE_MODEL=${GEMINI_LIVE_MODEL:-}
+    volumes:
+      # Demo recordings stay on the host: they are not committed or baked into the image.
+      - ./demo:/app/demo:ro
 
   web:
     build:
