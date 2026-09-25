@@ -4,6 +4,8 @@ import cors from 'cors';
 import { config } from './config/index.js';
 import { InMemorySessionRepository } from './persistence/InMemorySessionRepository.js';
 import { MockSpeechProvider } from './ai/MockSpeechProvider.js';
+import { GeminiSpeechProvider } from './ai/GeminiSpeechProvider.js';
+import { FileAudioChunkSource } from './audio/FileAudioChunkSource.js';
 import { CaptionNormalizer } from './captions/CaptionNormalizer.js';
 import { RealtimeServer } from './realtime/RealtimeServer.js';
 import { SessionManager } from './sessions/SessionManager.js';
@@ -17,14 +19,26 @@ const server = http.createServer(app);
 
 // Initialize architecture components
 const repository = new InMemorySessionRepository();
-const mockSpeechProvider = new MockSpeechProvider();
 const captionNormalizer = new CaptionNormalizer();
-const realtimeServer = new RealtimeServer(server);
+const realtimeServer = new RealtimeServer(server, {
+  statusLookup: (sessionId) => repository.peekStatus(sessionId),
+});
+
+// Without a key the server still runs, serving mock captions instead of Gemini ones.
+const useGemini = Boolean(config.geminiApiKey);
+if (!useGemini) {
+  console.warn('[OpenStage] GEMINI_API_KEY is not set: sessions will emit mock captions.');
+}
+
 const sessionManager = new SessionManager(
   repository,
-  mockSpeechProvider,
+  () => (useGemini ? new GeminiSpeechProvider({ apiKey: config.geminiApiKey }) : new MockSpeechProvider()),
   captionNormalizer,
-  realtimeServer
+  realtimeServer,
+  (session) => {
+    const path = session.audioSource?.type === 'file' ? session.audioSource.path : undefined;
+    return useGemini && path ? new FileAudioChunkSource(path) : undefined;
+  }
 );
 
 // Pre-seed demo sessions (Stage A & Stage B) for hackathon demo reproducibility
@@ -51,7 +65,18 @@ async function seedDemoSessions() {
     },
   });
 
-  console.log('[OpenStage] Demo sessions (stage-a, stage-b) initialized.');
+  await sessionManager.createSession({
+    id: 'demo-session',
+    name: 'Demo Session',
+    sourceLanguage: 'en',
+    targetLanguage: 'es',
+    audioSource: {
+      type: 'file',
+      path: resolveFromRepoRoot('demo/audio/stage-a.mp3'),
+    },
+  });
+
+  console.log('[OpenStage] Demo sessions (demo-session, stage-a, stage-b) initialized.');
 }
 
 // REST Endpoints

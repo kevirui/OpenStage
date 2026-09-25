@@ -72,6 +72,19 @@ export interface SpeechProvider {
   onCaption(callback: (event: CaptionEvent) => void): void;
 }
 
+/** Messages a browser client sends to the realtime server. */
+export type ClientMessage =
+  | { type: 'subscribe'; sessionId: string }
+  | { type: 'unsubscribe'; sessionId: string };
+
+/** Messages the realtime server sends to subscribed clients. */
+export type ServerMessage =
+  | { type: 'subscribed'; sessionId: string; status?: SessionStatus }
+  | { type: 'unsubscribed'; sessionId: string }
+  | { type: 'caption'; event: CaptionEvent }
+  | { type: 'session'; sessionId: string; status: SessionStatus; error?: string }
+  | { type: 'metrics'; metrics: SessionMetrics };
+
 export interface SessionMetrics {
   sessionId: string;
   status: SessionStatus;
