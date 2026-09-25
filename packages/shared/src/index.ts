@@ -41,6 +41,7 @@ export interface ProviderOptions {
   sessionId: string;
   sourceLanguage: string;
   targetLanguage: string;
+  audioSource?: AudioSource;
   glossary?: string[];
 }
 

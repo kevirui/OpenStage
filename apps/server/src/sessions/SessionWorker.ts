@@ -34,6 +34,7 @@ export class SessionWorker {
       sessionId: this.session.id,
       sourceLanguage: this.session.sourceLanguage,
       targetLanguage: this.session.targetLanguage,
+      audioSource: this.session.audioSource,
     });
   }
 

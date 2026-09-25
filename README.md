@@ -24,7 +24,7 @@ Conferences often run multiple simultaneous stages with talks in English that ne
                                        ▼
                            ┌───────────────────────┐
                            │    SpeechProvider     │
-                           │   (Abstraction Layer) │
+                           │ (GeminiSpeechProvider)│
                            └───────────┬───────────┘
                                        │
                                        ▼
@@ -32,11 +32,11 @@ Conferences often run multiple simultaneous stages with talks in English that ne
                            │ Caption Normalizer    │
                            └───────────┬───────────┘
                                        │
-                                   WebSocket
+                                   WebSocket / CLI
                                        │
                    ┌───────────────────┴───────────────────┐
                    ▼                                       ▼
-        Audience Web Client                       Admin Dashboard
+        Audience Web Client                       Terminal CLI / Admin
        (/session/[sessionId])                         (/admin)
 ```
 
@@ -48,6 +48,67 @@ SessionManager
      ├── Session Worker A (Stage A) ──> SpeechProvider ──> WS Clients
      ├── Session Worker B (Stage B) ──> SpeechProvider ──> WS Clients
      └── Session Worker C (Stage C) ──> SpeechProvider ──> WS Clients
+```
+
+---
+
+## Demo: Real Gemini Transcription (First Vertical Slice)
+
+This initial vertical slice proves that OpenStage can accept a local audio file, process it via Google Gemini (`gemini-2.5-flash`), extract the verbatim original transcription, generate an English → Spanish translation, and emit a normalized `CaptionEvent` to stdout.
+
+### 1. Configure GEMINI_API_KEY
+
+Create a `.env` file in the root directory (or export in your terminal):
+
+```bash
+GEMINI_API_KEY=your_google_gemini_api_key
+```
+
+### 2. Place Demo Audio File
+
+Place an MP3 audio file (e.g. `stage-a.mp3`) inside the `demo/audio/` directory:
+
+```bash
+demo/audio/stage-a.mp3
+```
+
+*(Note: If no audio file or API key is present, the demo runner exits cleanly with an informative error message).*
+
+### 3. Run the Demo
+
+Execute the demo runner command:
+
+```bash
+npm run demo:transcribe
+```
+
+Or pass a custom audio path:
+
+```bash
+npm run demo:transcribe -- workspace=apps/server demo/audio/stage-a.mp3
+```
+
+### 4. Expected Terminal Output
+
+```json
+=== OpenStage Vertical Slice Demo: Gemini Speech & Translation ===
+
+🎙 Processing Audio File: E:\Apps\nerdearla\demo\audio\stage-a.mp3
+🤖 Sending audio payload to Gemini API (gemini-2.5-flash)...
+
+✨ [CaptionEvent Received]:
+{
+  "id": "cap_gemini_1732501234567",
+  "sessionId": "demo-session-stage-a",
+  "timestamp": 1732501234567,
+  "original": "Today we are going to discuss building real-time AI architectures for technical conferences.",
+  "translation": "Hoy vamos a discutir la construcción de arquitecturas de IA en tiempo real para conferencias técnicas.",
+  "language": "en",
+  "targetLanguage": "es",
+  "final": true
+}
+
+✅ Demo vertical slice executed successfully!
 ```
 
 ---
@@ -84,19 +145,22 @@ openstage/
 
 - [x] Monorepo structure using npm workspaces (`@openstage/shared`, `@openstage/server`, `@openstage/web`).
 - [x] Shared TypeScript domain entities (`Session`, `SessionStatus`, `CaptionEvent`, `AudioSource`, `SpeechProvider` interface).
+- [x] Local audio → Gemini integration (`GeminiSpeechProvider` using official `@google/genai` SDK).
+- [x] Original transcript extraction and English → Spanish translation.
+- [x] `CaptionEvent` normalization & terminal runner (`npm run demo:transcribe`).
+- [x] Deterministic unit testing for `GeminiSpeechProvider` parsing and error handling (`npm run test`).
 - [x] Backend architecture boundaries (`sessions`, `audio`, `ai`, `captions`, `realtime`, `persistence`, `config`).
 - [x] SessionManager & isolated SessionWorkers supporting concurrent session management (`stage-a` and `stage-b`).
-- [x] `SpeechProvider` abstraction interface and `MockSpeechProvider` for foundation architecture testing without Gemini dependency.
-- [x] WebSocket realtime server for broadcasting caption events to clients.
 - [x] Next.js 14 web client with routes for Session Selection (`/`), Audience Live Caption View (`/session/[id]`), and Admin Control Dashboard (`/admin`).
 - [x] Docker Compose configuration & `.env.example`.
 - [x] Open-source MIT License.
 
-### Planned (Next Steps)
+### Not Yet Implemented (Planned Next Steps)
 
-- [ ] Gemini API Integration (`GeminiProvider` implementing `SpeechProvider`).
-- [ ] Real-time audio streaming from local MP3 files & microphone input into `SessionWorker`.
-- [ ] Glossary context injection into AI transcription prompts.
+- [ ] True streaming chunked audio processing.
+- [ ] Incremental real-time captions.
+- [ ] Live WebSocket delivery from Gemini audio stream to web clients.
+- [ ] Technical glossary context injection into AI prompts.
 - [ ] SRT / VTT subtitle file export after session completion.
 
 ### Optional
@@ -116,7 +180,7 @@ PORT=4000
 NODE_ENV=development
 NEXT_PUBLIC_SERVER_URL=http://localhost:4000
 NEXT_PUBLIC_WS_URL=ws://localhost:4000
-GEMINI_API_KEY=
+GEMINI_API_KEY=your_gemini_api_key_here
 DATABASE_URL=
 ```
 
@@ -136,12 +200,22 @@ DATABASE_URL=
    npm install
    ```
 
-2. Build all workspaces:
+2. Run unit tests:
+   ```bash
+   npm run test
+   ```
+
+3. Build all workspaces:
    ```bash
    npm run build
    ```
 
-3. Start backend and web frontend concurrently in development mode:
+4. Run the Gemini audio demo slice:
+   ```bash
+   npm run demo:transcribe
+   ```
+
+5. Start backend and web frontend concurrently in development mode:
    ```bash
    npm run dev
    ```
