@@ -136,7 +136,7 @@ Each line corresponds to a `CaptionEvent` (`final: false` while the turn is open
 
 ## Live Caption Demo (Audio → Gemini → WebSocket → Browser)
 
-The same pipeline can be driven from the backend so captions reach the audience page while the audio is being processed. This is currently a **single-session demonstration**: one session at a time is exercised end to end.
+The same pipeline can be driven from the backend so captions reach the audience page while the audio is being processed.
 
 ```text
 demo/audio/stage-a.mp3 → SessionWorker → GeminiSpeechProvider
@@ -175,7 +175,86 @@ The browser connects to `ws://localhost:4000` and subscribes to a single session
                                    "language": "en", "targetLanguage": "es", "final": false } }
 ```
 
-Captions are routed per session: a client subscribed to `stage-a` never receives `stage-b` events. The audience page keeps the finalized captions plus the current interim one, and shows the connection state (Connecting / Live / Disconnected) next to the session lifecycle state (`CREATED`, `STARTING`, `LIVE`, `COMPLETED`, `ERROR`). All AI processing stays on the server: the browser only receives normalized domain events and never sees `GEMINI_API_KEY`.
+Captions are routed per session: a client subscribed to `stage-a` never receives `stage-b` events (see the multi-session demo below). The audience page keeps the finalized captions plus the current interim one, and shows the connection state (Connecting / Live / Disconnected) next to the session lifecycle state (`CREATED`, `STARTING`, `LIVE`, `COMPLETED`, `ERROR`). All AI processing stays on the server: the browser only receives normalized domain events and never sees `GEMINI_API_KEY`.
+
+---
+
+## Multi-Session Demo (two concurrent stages)
+
+Two sessions can run at the same time, each with its own worker, audio file, Gemini connection and caption stream.
+
+```text
+                 SessionManager
+                  /           \
+        SessionWorker A     SessionWorker B
+             |                    |
+          Gemini A             Gemini B
+             |                    |
+        WebSocket A           WebSocket B
+             |                    |
+         Browser A            Browser B
+```
+
+### 1. Provide two audio files
+
+The seeded sessions read one recording each — place your own files (nothing is downloaded automatically):
+
+```bash
+demo/audio/stage-a.mp3   # session `stage-a`
+demo/audio/stage-b.mp3   # session `stage-b`
+```
+
+Different recordings make the interleaving obvious, but the same file may be copied to both paths.
+
+### 2. Start the backend and the web app
+
+```bash
+npm run dev
+```
+
+### 3. Open both audience pages side by side
+
+- [http://localhost:3000/session/stage-a](http://localhost:3000/session/stage-a)
+- [http://localhost:3000/session/stage-b](http://localhost:3000/session/stage-b)
+
+The home page ([http://localhost:3000](http://localhost:3000)) lists both sessions with their live status.
+
+### 4. Start both sessions concurrently
+
+```bash
+npm run demo:multi-session
+```
+
+The runner subscribes to both sessions, starts them without waiting for each other, and labels every caption, so interleaved output proves the pipelines overlap:
+
+```text
+[STAGE-A] STARTING
+[STAGE-B] STARTING
+[STAGE-A] [00:03] EN: Welcome everyone to Open Stage.
+[STAGE-A] [00:03] ES: Bienvenidos todos a Open Stage.
+[STAGE-B] [00:03] EN: Today we are discussing agent architectures.
+[STAGE-B] [00:03] ES: Hoy hablamos de arquitecturas de agentes.
+[STAGE-A] [00:06] EN: Our goal is to make every talk accessible.
+[STAGE-A] [00:06] ES: Nuestro objetivo es que cada charla sea accesible.
+```
+
+Pass explicit ids to run a different pair: `npm run demo:multi-session -- stage-a demo-session`.
+
+### How isolation works
+
+`SessionManager.startSession(id)` builds a fresh `SessionWorker` per session, and each worker owns its `SpeechProvider` (one Gemini Live connection), its `AudioChunkSource` and its caption callback. Nothing mutable is shared between sessions: status transitions are stored per session id, captions are broadcast only to the WebSocket clients subscribed to that id, and an error in one session marks only that session `ERROR` while the other keeps streaming. When a session ends — normally or with an error — its worker stops the Gemini stream, its audio pump is abandoned and the worker is dropped from the active map.
+
+### Scaling beyond two sessions (conceptual)
+
+This is an architectural explanation, **not** an implemented scaling system. Today OpenStage runs sessions as concurrent async pipelines inside a single Node.js process; only two concurrent sessions have been exercised end to end, and the practical ceiling is the Gemini quota plus one `ffmpeg` process per session on one machine.
+
+```text
+1 session  = 1 worker
+2 sessions = 2 workers
+10 sessions = 10 workers (still one process, quota permitting)
+```
+
+Beyond that, workers would be distributed across several backend instances behind a load balancer, with a shared coordination/message layer so any instance can serve the WebSocket clients of any session. None of that is implemented, and OpenStage does not currently support unlimited sessions.
 
 ---
 
@@ -216,6 +295,7 @@ openstage/
 - [x] Incremental transcription and incremental English → Spanish translation.
 - [x] Incremental `CaptionEvent` generation (interim vs final) and terminal runner (`npm run demo:transcribe`).
 - [x] WebSocket delivery of live captions to the audience page with per-session subscriptions (`npm run demo:stream` + `/session/demo-session`).
+- [x] Two concurrent, isolated sessions with independent workers, Gemini connections, lifecycles and caption streams (`npm run demo:multi-session`).
 - [x] Deterministic unit tests for chunking, streaming event normalization and error handling (`npm run test`).
 - [x] Backend architecture boundaries (`sessions`, `audio`, `ai`, `captions`, `realtime`, `persistence`, `config`).
 - [x] SessionManager & isolated SessionWorkers supporting concurrent session management (`stage-a` and `stage-b`).
@@ -225,7 +305,7 @@ openstage/
 
 ### Not Yet Implemented (Planned Next Steps)
 
-- [ ] Concurrent live sessions backed by Gemini (only one session at a time has been exercised end to end).
+- [ ] More than two concurrent sessions, or sessions distributed across backend instances (see *Scaling beyond two sessions*).
 - [ ] Microphone / live conference audio input.
 - [ ] Production deployment.
 - [ ] Technical glossary context injection into AI prompts.

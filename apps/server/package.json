@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "jest --config jest.config.json",
     "demo:transcribe": "tsx src/demo/transcribeDemo.ts",
-    "demo:stream": "tsx src/demo/streamDemo.ts"
+    "demo:stream": "tsx src/demo/streamDemo.ts",
+    "demo:multi-session": "tsx src/demo/multiSessionDemo.ts"
   },
   "dependencies": {
     "@google/genai": "^2.24.0",

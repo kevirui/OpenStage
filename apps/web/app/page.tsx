@@ -10,34 +10,49 @@ export default function HomePage() {
 
   useEffect(() => {
     const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:4000';
-    fetch(`${serverUrl}/api/sessions`)
-      .then((res) => res.json())
-      .then((data) => {
-        setSessions(data);
-        setLoading(false);
-      })
-      .catch(() => {
-        // Fallback default demo sessions if backend isn't reachble yet
-        setSessions([
-          {
-            id: 'stage-a',
-            name: 'Stage A: Keynote & Core Track',
-            sourceLanguage: 'en',
-            targetLanguage: 'es',
-            status: 'CREATED',
-            createdAt: new Date().toISOString(),
-          },
-          {
-            id: 'stage-b',
-            name: 'Stage B: Architecture & AI Track',
-            sourceLanguage: 'en',
-            targetLanguage: 'es',
-            status: 'CREATED',
-            createdAt: new Date().toISOString(),
-          },
-        ]);
-        setLoading(false);
-      });
+    let cancelled = false;
+
+    const load = () =>
+      fetch(`${serverUrl}/api/sessions`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (cancelled) return;
+          setSessions(data);
+          setLoading(false);
+        });
+
+    // Polled so concurrently running sessions show their live status side by side.
+    const interval = setInterval(() => {
+      load().catch(() => undefined);
+    }, 3000);
+
+    load().catch(() => {
+      // Fallback default demo sessions if backend isn't reachble yet
+      setSessions([
+        {
+          id: 'stage-a',
+          name: 'Stage A: Keynote & Core Track',
+          sourceLanguage: 'en',
+          targetLanguage: 'es',
+          status: 'CREATED',
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: 'stage-b',
+          name: 'Stage B: Architecture & AI Track',
+          sourceLanguage: 'en',
+          targetLanguage: 'es',
+          status: 'CREATED',
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+      setLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, []);
 
   return (
