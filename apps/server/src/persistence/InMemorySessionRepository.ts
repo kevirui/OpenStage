@@ -13,6 +13,11 @@ export class InMemorySessionRepository {
     return session ? { ...session } : null;
   }
 
+  /** Synchronous read for callers that cannot await, such as WebSocket handlers. */
+  peekStatus(id: string): SessionStatus | undefined {
+    return this.sessions.get(id)?.status;
+  }
+
   async findAll(): Promise<Session[]> {
     return Array.from(this.sessions.values()).map((s) => ({ ...s }));
   }

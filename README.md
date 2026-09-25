@@ -134,6 +134,51 @@ Each line corresponds to a `CaptionEvent` (`final: false` while the turn is open
 
 ---
 
+## Live Caption Demo (Audio → Gemini → WebSocket → Browser)
+
+The same pipeline can be driven from the backend so captions reach the audience page while the audio is being processed. This is currently a **single-session demonstration**: one session at a time is exercised end to end.
+
+```text
+demo/audio/stage-a.mp3 → SessionWorker → GeminiSpeechProvider
+        → CaptionNormalizer → CaptionEvent → RealtimeServer (WebSocket)
+        → /session/demo-session
+```
+
+1. Configure `GEMINI_API_KEY` in the root `.env` (without it the server falls back to mock captions) and place `demo/audio/stage-a.mp3`.
+2. Start the backend and the web app:
+   ```bash
+   npm run dev
+   ```
+   (or `npm run dev:server` and `npm run dev:web` in two terminals)
+3. Open the audience page: [http://localhost:3000/session/demo-session](http://localhost:3000/session/demo-session)
+4. Start the demo audio stream:
+   ```bash
+   npm run demo:stream
+   ```
+   Pass another seeded session id if needed: `npm run demo:stream -- stage-b`.
+5. Captions appear progressively in the browser (and are mirrored in the terminal for debugging).
+
+### WebSocket protocol
+
+The browser connects to `ws://localhost:4000` and subscribes to a single session; the payload is the shared `CaptionEvent`, no separate DTO:
+
+```jsonc
+// client → server
+{ "type": "subscribe",   "sessionId": "demo-session" }
+{ "type": "unsubscribe", "sessionId": "demo-session" }
+
+// server → client
+{ "type": "subscribed", "sessionId": "demo-session", "status": "CREATED" }
+{ "type": "session",    "sessionId": "demo-session", "status": "LIVE" }
+{ "type": "caption",    "event": { "sessionId": "demo-session", "timestamp": 12345,
+                                   "original": "...", "translation": "...",
+                                   "language": "en", "targetLanguage": "es", "final": false } }
+```
+
+Captions are routed per session: a client subscribed to `stage-a` never receives `stage-b` events. The audience page keeps the finalized captions plus the current interim one, and shows the connection state (Connecting / Live / Disconnected) next to the session lifecycle state (`CREATED`, `STARTING`, `LIVE`, `COMPLETED`, `ERROR`). All AI processing stays on the server: the browser only receives normalized domain events and never sees `GEMINI_API_KEY`.
+
+---
+
 ## Repository Structure
 
 ```text
@@ -170,6 +215,7 @@ openstage/
 - [x] Gemini Live streaming integration (`GeminiSpeechProvider` using `ai.live.connect` from the official `@google/genai` SDK).
 - [x] Incremental transcription and incremental English → Spanish translation.
 - [x] Incremental `CaptionEvent` generation (interim vs final) and terminal runner (`npm run demo:transcribe`).
+- [x] WebSocket delivery of live captions to the audience page with per-session subscriptions (`npm run demo:stream` + `/session/demo-session`).
 - [x] Deterministic unit tests for chunking, streaming event normalization and error handling (`npm run test`).
 - [x] Backend architecture boundaries (`sessions`, `audio`, `ai`, `captions`, `realtime`, `persistence`, `config`).
 - [x] SessionManager & isolated SessionWorkers supporting concurrent session management (`stage-a` and `stage-b`).
@@ -179,8 +225,7 @@ openstage/
 
 ### Not Yet Implemented (Planned Next Steps)
 
-- [ ] WebSocket delivery of live Gemini captions to the audience web client (the web app still renders mock captions).
-- [ ] Concurrent live sessions backed by Gemini (only the single-session demo is wired to the Live API).
+- [ ] Concurrent live sessions backed by Gemini (only one session at a time has been exercised end to end).
 - [ ] Microphone / live conference audio input.
 - [ ] Production deployment.
 - [ ] Technical glossary context injection into AI prompts.
@@ -240,7 +285,7 @@ FFMPEG_PATH=/usr/bin/ffmpeg                          # audio decoder location
    npm run build
    ```
 
-4. Run the Gemini audio demo slice:
+4. Run the Gemini audio demo slice in the terminal:
    ```bash
    npm run demo:transcribe
    ```

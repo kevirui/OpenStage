@@ -9,7 +9,8 @@
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "test": "jest --config jest.config.json",
-    "demo:transcribe": "tsx src/demo/transcribeDemo.ts"
+    "demo:transcribe": "tsx src/demo/transcribeDemo.ts",
+    "demo:stream": "tsx src/demo/streamDemo.ts"
   },
   "dependencies": {
     "@google/genai": "^2.24.0",
