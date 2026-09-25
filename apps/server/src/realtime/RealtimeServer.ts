@@ -1,13 +1,13 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
-import { CaptionEvent, SessionMetrics } from '@openstage/shared';
+import { CaptionEvent, CaptionSink, SessionMetrics } from '@openstage/shared';
 
 interface ClientConnection {
   ws: WebSocket;
   sessionId?: string;
 }
 
-export class RealtimeServer {
+export class RealtimeServer implements CaptionSink {
   private wss: WebSocketServer;
   private clients: Set<ClientConnection> = new Set();
 
@@ -39,6 +39,10 @@ export class RealtimeServer {
         this.clients.delete(conn);
       });
     });
+  }
+
+  publish(event: CaptionEvent): void {
+    this.broadcastCaption(event);
   }
 
   broadcastCaption(event: CaptionEvent): void {

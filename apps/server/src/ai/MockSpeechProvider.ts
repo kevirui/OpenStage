@@ -29,6 +29,10 @@ export class MockSpeechProvider implements SpeechProvider {
     this.activeStreams.set(options.sessionId, interval);
   }
 
+  async sendAudioChunk(): Promise<void> {
+    // The mock generates captions on a timer and ignores incoming audio.
+  }
+
   async stopStream(sessionId: string): Promise<void> {
     const interval = this.activeStreams.get(sessionId);
     if (interval) {
